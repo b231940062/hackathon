@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m with context %}
+{% block title %}Гишүүний самбар{% endblock %}
+{% block content %}
+<div class="container" style="max-width:1320px">
+  <section class="dash-head">
+    {{ m.avatar(current_user, 'avatar-xl ring') }}
+    <div>
+      <div class="sub">Сайн байна уу,</div>
+      <h1>{{ current_user.full_name }}</h1>
+      <div class="sub">{{ profile.position if profile else 'УИХ-ын гишүүн' }}</div>
+      <div class="chips">
+        <span class="chip gold">🏛️ {{ profile.constituency if profile else 'Тойрог тохируулаагүй' }}</span>
+        {% if profile and profile.district %}<span class="chip">📍 {{ profile.district.name }} дүүрэг</span>{% endif %}
+        {% if profile and profile.khoroos %}<span class="chip">Хороод: {{ profile.khoroo_numbers|join(', ') }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="flex flex-wrap" style="justify-content:flex-end">
+      <a class="btn btn-gold" href="/mp/issues?view=new">🆕 Шинэ асуудлууд ({{ stats.new }})</a>
+      <a class="btn btn-light" style="background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.3)" href="/mps/{{ current_user.id }}">🌐 Нийтийн профайл</a>
+    </div>
+  </section>
+
+  <div class="kpis">
+    <div class="kpi"><span class="k-ico">📍</span><b>{{ stats.total }}</b><span>Тойргийн нийт асуудал</span></div>
+    <div class="kpi accent"><span class="k-ico">🆕</span><b>{{ stats.new }}</b><span>Хүлээн авахыг хүлээж буй</span></div>
+    <div class="kpi"><span class="k-ico">🛠️</span><b>{{ stats.active }}</b><span>Шийдвэрлэгдэж буй</span></div>
+    <div class="kpi green"><span class="k-ico">✅</span><b>{{ stats.resolved }}</b><span>Шийдвэрлэсэн ({{ stats.resolved_pct }}%)</span></div>
+    <div class="kpi"><span class="k-ico">⏱️</span><b>{{ stats.avg_response }}</b><span>Дундаж хүлээн авах хугацаа</span></div>
+    <div class="kpi"><span class="k-ico">😊</span><b>{{ stats.satisfaction ~ '%' if stats.satisfaction is not none else '—' }}</b><span>Иргэдийн баталгаажуулалт</span></div>
+  </div>
+
+  <div class="dash-grid">
+    <div class="stack">
+      <section class="card urgent-card">
+        <div class="card-head"><h2>⚡ Шуурхай анхаарах шаардлагатай</h2><a class="small" href="/mp/issues?view=urgent">Бүгд ({{ urgent_count }}) →</a></div>
+        <p class="small muted" style="padding:10px 20px 0;margin:0">Ач холбогдол ≥ {{ threshold }}, яаралтай гэж тэмдэглэгдсэн, эсвэл иргэд шийдвэрлэлтийг эсэргүүцсэн асуудлууд.</p>
+        <ul class="row-list">
+          {% for i in urgent %}<li>{{ m.row_item(i, tier(i)) }}</li>{% else %}<li>{{ m.empty('🎉', 'Шуурхай асуудал алга') }}</li>{% endfor %}
+        </ul>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>📍 Таны тойргийн асуудлууд</h2><a class="small" href="/mp/issues?view=constituency">Бүгд ({{ open_count }}) →</a></div>
+        <p class="small muted" style="padding:10px 20px 0;margin:0">Эрэмбэ: <b>таны хороод</b> → тойргийн дүүрэг → их дэмжлэг → өндөр ач холбогдол</p>
+        <ul class="row-list">
+          {% for i in constituency %}<li>{{ m.row_item(i, tier(i)) }}</li>{% else %}<li>{{ m.empty('📭', 'Нээлттэй асуудал алга') }}</li>{% endfor %}
+        </ul>
+      </section>
+
+      <div class="grid-2">
+        <section class="card">
+          <div class="card-head"><h3>🛠️ Шийдвэрлэгдэж буй</h3><a class="small" href="/mp/issues?view=active">Бүгд</a></div>
+          <ol class="rank-list">
+            {% for i in in_progress %}<li><a href="/issues/{{ i.id }}"><span class="rk">{{ i.status_info.icon }}</span><span><span class="t">{{ i.title }}</span><span class="m">{{ i.status_info.label }} · {{ i.updated_at|timeago }}</span></span></a></li>
+            {% else %}<li class="muted small" style="padding:10px">Алга</li>{% endfor %}
+          </ol>
+        </section>
+        <section class="card">
+          <div class="card-head"><h3>✅ Шийдвэрлэгдсэн</h3><a class="small" href="/mp/issues?view=resolved">Бүгд</a></div>
+          <ol class="rank-list">
+            {% for i in resolved %}{% set cs = i.confirmation_stats %}<li><a href="/issues/{{ i.id }}#resolution"><span class="rk" style="background:var(--green-bg);color:var(--green)">✓</span><span><span class="t">{{ i.title }}</span><span class="m">{{ i.resolved_at|date }} · {% if cs.disputed %}<b style="color:var(--red)">⚠ эсэргүүцэлтэй</b>{% else %}баталгаажуулалт {{ cs.yes }}/{{ cs.total }}{% endif %}</span></span></a></li>
+            {% else %}<li class="muted small" style="padding:10px">Алга</li>{% endfor %}
+          </ol>
+        </section>
+      </div>
+    </div>
+
+    <div class="stack">
+      <section class="card">
+        <div class="card-head"><h3>🔥 Топ асуудлууд (таны тойрог)</h3></div>
+        <ol class="rank-list">
+          {% for i in top %}<li><a href="/issues/{{ i.id }}"><span class="rk">{{ loop.index }}</span><span><span class="t">{{ i.title }}</span><span class="m">⚡ {{ i.priority_score }}/100 · 👍 {{ i.support_count }} · {{ i.location_label }}</span></span></a></li>{% endfor %}
+        </ol>
+      </section>
+      <section class="card">
+        <div class="card-head"><h3>👍 Хамгийн их дэмжигдсэн</h3></div>
+        <ol class="rank-list">
+          {% for i in most_supported %}<li><a href="/issues/{{ i.id }}"><span class="rk">{{ loop.index }}</span><span><span class="t">{{ i.title }}</span><span class="m">👍 {{ i.support_count }} дэмжигч · {{ i.status_info.label }}</span></span></a></li>{% endfor %}
+        </ol>
+      </section>
+      {% if khoroo_bars %}
+      <section class="card">
+        <div class="card-head"><h3>🏘️ Хороодоор</h3><span class="chart-legend"><span><i style="background:var(--brand-500)"></i>Нээлттэй</span><span><i style="background:var(--green)"></i>Шийдсэн</span></span></div>
+        <div class="card-body">
+          {% set mx = khoroo_max %}
+          {% for k in khoroo_bars %}
+          <div class="hbar"><span>{{ k.label }}</span><div class="track"><i class="o" style="width: {{ (k.open * 100 / mx)|round|int }}%"></i><i class="r" style="width: {{ (k.resolved * 100 / mx)|round|int }}%"></i></div><b>{{ k.open + k.resolved }}</b></div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,175 @@
+{% macro status_badge(status, lg=False) -%}
+{%- set s = STATUS_INFO.get(status, STATUS_INFO['NEW']) -%}
+<span class="status status-{{ s.color }}{% if lg %} status-lg{% endif %}" title="{{ s.hint }}">{{ s.label }}</span>
+{%- endmacro %}
+
+{% macro status_short(status) -%}
+{%- set s = STATUS_INFO.get(status, STATUS_INFO['NEW']) -%}
+<span class="status status-{{ s.color }}" title="{{ s.label }}">{{ s.short }}</span>
+{%- endmacro %}
+
+{% macro prio_pill(score, label=True) -%}
+{%- set lv = priority_level(score) -%}
+<span class="prio prio-{{ lv.key }}" title="Ач холбогдлын оноо: {{ lv.label }}">{% if lv.key == 'critical' %}🔥{% else %}⚡{% endif %}{% if label %} Ач холбогдол{% endif %} {{ score }}/100</span>
+{%- endmacro %}
+
+{% macro avatar(user, cls='') -%}
+{%- if user and user.avatar_url -%}
+<img class="avatar {{ cls }}" src="{{ user.avatar_url }}" alt="{{ user.full_name }}">
+{%- elif user -%}
+<span class="avatar {{ cls }}" style="background: {{ user.avatar_color }}" aria-hidden="true">{{ user.initials }}</span>
+{%- else -%}
+<span class="avatar {{ cls }}" style="background:#94a3b8" aria-hidden="true">?</span>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro cat_chip(cat) -%}
+{%- set c = CATEGORIES.get(cat, CATEGORIES['other']) -%}
+<span class="chip">{{ c.icon }} {{ c.label }}</span>
+{%- endmacro %}
+
+{% macro mini_progress(issue, legend=True) -%}
+<div class="ic-progress">
+  <div class="bar" aria-label="Явц: {{ issue.status_info.label }}">
+    {%- for s in STATUSES -%}
+    <i class="{% if issue.is_resolved %}done-all{% elif loop.index0 <= issue.status_index %}on{% endif %}"></i>
+    {%- endfor -%}
+  </div>
+  {% if legend %}<div class="legend"><span>Мэдээлсэн</span><span>{{ issue.status_info.icon }} {{ issue.status_info.label }}</span><span>Шийдвэрлэсэн</span></div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro support_button(issue, supported_ids, cls='act') -%}
+{%- set mine = current_user and issue.author_id == current_user.id -%}
+{%- set on = issue.id in supported_ids or mine -%}
+{%- if current_user and not current_user.is_citizen -%}
+<button type="button" class="{{ cls }}" disabled title="Зөвхөн иргэд дэмжих боломжтой"><span class="ico">👍</span><span class="lbl">Дэмжих</span></button>
+{%- elif mine -%}
+<button type="button" class="{{ cls }} supported" disabled title="Таны мэдээлсэн асуудал"><span class="ico">👍</span><span class="lbl">Таны асуудал</span></button>
+{%- else -%}
+<button type="button" class="{{ cls }} js-support{% if on %} supported{% endif %}" data-id="{{ issue.id }}" aria-pressed="{{ 'true' if on else 'false' }}"><span class="ico">👍</span><span class="lbl">{% if on %}Дэмжсэн{% else %}Дэмжих{% endif %}</span></button>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro issue_card(issue, supported_ids) -%}
+<article class="card issue-card" id="issue-{{ issue.id }}">
+  <header class="ic-head">
+    {{ avatar(issue.author) }}
+    <div class="who">
+      <b>{{ issue.author.full_name if issue.author else 'Устгагдсан хэрэглэгч' }}</b>
+      <span>{{ issue.created_at|timeago }} · 📍 {{ issue.location_label }}</span>
+    </div>
+    {{ status_badge(issue.status) }}
+  </header>
+  <div class="ic-body">
+    <div class="ic-tags">{{ cat_chip(issue.category) }}{{ prio_pill(issue.priority_score) }}</div>
+    <h3><a href="/issues/{{ issue.id }}">{{ issue.title }}</a></h3>
+    <p class="ic-desc">{{ issue.description }}</p>
+  </div>
+  {% if issue.is_resolved and issue.after_image %}
+  <a class="ic-media" href="/issues/{{ issue.id }}#resolution" aria-label="Өмнө ба дараах зураг">
+    <div class="ba-thumb"><img src="/static/{{ issue.before_image }}" alt="Өмнө" loading="lazy"><img src="/static/{{ issue.after_image }}" alt="Дараа" loading="lazy"><span class="b">ӨМНӨ</span><span class="a">ДАРАА</span></div>
+  </a>
+  {% elif issue.cover_image %}
+  <a class="ic-media" href="/issues/{{ issue.id }}"><img src="/static/{{ issue.cover_image }}" alt="{{ issue.title }}" loading="lazy"></a>
+  {% endif %}
+  {% set last = issue.official_responses[-1] if issue.official_responses else None %}
+  {% if last %}
+  <div class="ic-mp official">
+    <span>🏛️</span>
+    <div class="grow"><b>{{ last.author.full_name if last.author else 'УИХ-ын гишүүн' }}</b> · албан хариу: <span class="muted">“{{ last.content|truncate(80) }}”</span></div>
+  </div>
+  {% elif issue.mp %}
+  <div class="ic-mp"><span>🏛️</span><div class="grow">Хариуцах гишүүн: <b>{{ issue.mp.full_name }}</b></div></div>
+  {% endif %}
+  {{ mini_progress(issue) }}
+  <div class="ic-counts">
+    <span>👍 <b class="js-support-count" data-id="{{ issue.id }}">{{ issue.support_count }}</b> дэмжигч</span>
+    <span><b class="js-comment-count" data-id="{{ issue.id }}">{{ issue.comment_count }}</b> сэтгэгдэл · {{ issue.created_at|date }}</span>
+  </div>
+  <div class="ic-actions">
+    {{ support_button(issue, supported_ids) }}
+    <button type="button" class="act js-comment-toggle" data-id="{{ issue.id }}"><span class="ico">💬</span> Сэтгэгдэл</button>
+    <a class="act" href="/issues/{{ issue.id }}"><span class="ico">📄</span> Дэлгэрэнгүй</a>
+  </div>
+  <div class="inline-comments" id="ic-{{ issue.id }}" hidden>
+    {% if current_user %}
+    <form class="comment-form js-comment-form" method="post" action="/issues/{{ issue.id }}/comments" data-id="{{ issue.id }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      {{ avatar(current_user, 'avatar-sm') }}
+      <textarea name="content" rows="1" maxlength="1000" placeholder="Сэтгэгдэл бичих..." required></textarea>
+      <button class="btn btn-primary btn-sm">Илгээх</button>
+    </form>
+    <div class="comments-list mt-2 js-new-comments"></div>
+    {% else %}
+    <p class="muted small mt-2">Сэтгэгдэл үлдээхийн тулд <a href="/login?next=/issues/{{ issue.id }}">нэвтэрнэ үү</a>.</p>
+    {% endif %}
+    <a class="small" href="/issues/{{ issue.id }}#comments">Бүх сэтгэгдлийг харах →</a>
+  </div>
+</article>
+{%- endmacro %}
+
+{% macro tile(issue, supported_ids=[]) -%}
+<article class="tile">
+  <a class="tile-img" href="/issues/{{ issue.id }}">
+    {% if issue.is_resolved and issue.after_image %}
+    <div class="ba-thumb" style="aspect-ratio:auto;height:100%"><img src="/static/{{ issue.before_image }}" alt="" loading="lazy"><img src="/static/{{ issue.after_image }}" alt="" loading="lazy"><span class="b">ӨМНӨ</span><span class="a">ДАРАА</span></div>
+    {% elif issue.cover_image %}<img src="/static/{{ issue.cover_image }}" alt="" loading="lazy">{% endif %}
+    {% if not (issue.is_resolved and issue.after_image) %}{{ status_badge(issue.status) }}{% endif %}
+  </a>
+  <div class="tile-body">
+    <div class="tile-meta"><span>{{ issue.category_info.icon }} {{ issue.category_info.label }}</span><span>📍 {{ issue.location_label }}</span></div>
+    <h3><a href="/issues/{{ issue.id }}">{{ issue.title }}</a></h3>
+    {{ mini_progress(issue, legend=False) }}
+    <div class="tile-foot">
+      <span>👍 <span class="js-support-count" data-id="{{ issue.id }}">{{ issue.support_count }}</span> · 💬 {{ issue.comment_count }}</span>
+      {% if issue.is_resolved %}<span class="status status-green">Шийдвэрлэсэн</span>{% else %}{{ prio_pill(issue.priority_score, label=False) }}{% endif %}
+    </div>
+  </div>
+</article>
+{%- endmacro %}
+
+{% macro row_item(issue, tier=None, show_status=True) -%}
+{%- set lv = priority_level(issue.priority_score) -%}
+<a class="row-item" href="/issues/{{ issue.id }}">
+  <div class="score {{ lv.key }}">{{ issue.priority_score }}<small>ОНОО</small></div>
+  <div>
+    <span class="r-title">{{ issue.title }}</span>
+    <div class="r-meta">
+      {% if tier is not none %}
+        {% if tier >= 2 %}<span class="tier-tag tier-2">Таны хороо</span>{% elif tier == 1 %}<span class="tier-tag tier-1">Тойргийн дүүрэг</span>{% else %}<span class="tier-tag tier-0">Бусад</span>{% endif %}
+      {% endif %}
+      <span>📍 {{ issue.location_label }}</span>
+      <span>{{ issue.category_info.icon }} {{ issue.category_info.label }}</span>
+      <span>🕒 {{ issue.created_at|date }}</span>
+      {% if issue.urgency == 'critical' %}<span class="chip chip-red">Яаралтай</span>{% endif %}
+    </div>
+  </div>
+  <div class="r-side">
+    {% if show_status %}{{ status_short(issue.status) }}{% endif %}
+    <div class="r-nums"><span>👍 {{ issue.support_count }}</span><span>💬 {{ issue.comment_count }}</span></div>
+  </div>
+</a>
+{%- endmacro %}
+
+{% macro empty(icon, title, text='') -%}
+<div class="empty"><div class="big">{{ icon }}</div><h3>{{ title }}</h3>{% if text %}<p>{{ text }}</p>{% endif %}</div>
+{%- endmacro %}
+
+{% macro district_selects(districts, district_id, khoroo_id, required=True, district_name='district_id', khoroo_name='khoroo_id') -%}
+<div class="form-row js-geo" data-districts='{{ districts|jsonscript }}'>
+  <div class="field">
+    <label for="f-district">Дүүрэг {% if required %}<span class="req">*</span>{% endif %}</label>
+    <select id="f-district" name="{{ district_name }}" class="js-district" {% if required %}required{% endif %}>
+      <option value="">— Дүүрэг сонгох —</option>
+      {% for d in districts %}<option value="{{ d.id }}" {% if d.id|string == district_id|string %}selected{% endif %}>{{ d.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="f-khoroo">Хороо</label>
+    <select id="f-khoroo" name="{{ khoroo_name }}" class="js-khoroo" data-selected="{{ khoroo_id or '' }}">
+      <option value="">— Хороо сонгох —</option>
+    </select>
+  </div>
+</div>
+{%- endmacro %}

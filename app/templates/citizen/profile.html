@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m with context %}
+{% block title %}Профайл{% endblock %}
+{% block content %}
+<div class="container container-narrow">
+  <div class="card profile-hero mb-3">
+    {{ m.avatar(current_user, 'avatar-xl') }}
+    <div class="grow">
+      <span class="role-badge {{ current_user.role }}">{{ current_user.role_label }}</span>
+      <h1 class="mt-1 mb-0">{{ current_user.full_name }}</h1>
+      <div class="muted">{{ current_user.email }}{% if current_user.district %} · 📍 {{ current_user.district.name }}{% if current_user.khoroo %}, {{ current_user.khoroo.label }}{% endif %}{% endif %}</div>
+      <div class="xs muted">Бүртгүүлсэн: {{ current_user.created_at|date }}</div>
+    </div>
+    <div class="stat-mini" style="min-width:240px">
+      <div><b>{{ counts.issues }}</b><span>Мэдээлсэн</span></div>
+      <div><b>{{ counts.supports }}</b><span>Дэмжсэн</span></div>
+    </div>
+  </div>
+
+  {% if my_mp %}
+  <div class="alert alert-info flex between flex-wrap">
+    <span>🏛️ Таны тойргийн гишүүн: <b>{{ my_mp.full_name }}</b></span><a href="/mps/{{ my_mp.id }}" class="btn btn-light btn-sm">Профайл харах</a>
+  </div>
+  {% endif %}
+
+  <div class="grid-2">
+    <form class="card" method="post" action="/profile">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="card-head"><h3>👤 Хувийн мэдээлэл</h3></div>
+      <div class="card-body form-grid">
+        {% if errors %}<div class="alert alert-error"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
+        <div class="field"><label for="p-name">Овог нэр</label><input id="p-name" class="input" name="full_name" required maxlength="120" value="{{ current_user.full_name }}"></div>
+        <div class="field"><label for="p-phone">Утас</label><input id="p-phone" class="input" name="phone" maxlength="20" value="{{ current_user.phone or '' }}"></div>
+        {% if not current_user.is_mp %}
+        {{ m.district_selects(districts, current_user.district_id, current_user.khoroo_id, required=False) }}
+        {% else %}
+        <p class="small muted">Тойрог, хороог зөвхөн админ өөрчилнө.</p>
+        {% endif %}
+        <button class="btn btn-primary">Хадгалах</button>
+      </div>
+    </form>
+    <form class="card" method="post" action="/profile/password">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="card-head"><h3>🔒 Нууц үг солих</h3></div>
+      <div class="card-body form-grid">
+        {% if pw_errors %}<div class="alert alert-error"><ul>{% for e in pw_errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
+        <div class="field"><label for="p-cur">Одоогийн нууц үг</label><input id="p-cur" class="input" type="password" name="current_password" required autocomplete="current-password"></div>
+        <div class="field"><label for="p-new">Шинэ нууц үг</label><input id="p-new" class="input" type="password" name="new_password" required minlength="8" autocomplete="new-password"></div>
+        <div class="field"><label for="p-new2">Шинэ нууц үг давтах</label><input id="p-new2" class="input" type="password" name="new_password2" required minlength="8" autocomplete="new-password"></div>
+        <button class="btn btn-primary">Нууц үг солих</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

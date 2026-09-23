@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m with context %}
+{% block title %}Миний профайл{% endblock %}
+{% block content %}
+<div class="container container-narrow">
+  <div class="card profile-hero mb-3">
+    {{ m.avatar(current_user, 'avatar-xl ring') }}
+    <div class="grow">
+      <span class="role-badge mp">УИХ-ын гишүүн</span>
+      <h1 class="mt-1 mb-0">{{ current_user.full_name }}</h1>
+      <div class="muted">{{ profile.position if profile else '' }}</div>
+      <div class="flex flex-wrap mt-1" style="gap:6px">
+        <span class="chip chip-gold">🏛️ {{ profile.constituency if profile else '—' }}</span>
+        {% if profile and profile.district %}<span class="chip">📍 {{ profile.district.name }}</span>{% endif %}
+        {% for k in (profile.khoroos if profile else []) %}<span class="chip chip-brand">{{ k.label }}</span>{% endfor %}
+      </div>
+    </div>
+    <a class="btn btn-light" href="/mps/{{ current_user.id }}">🌐 Нийтийн профайл</a>
+  </div>
+  <div class="grid-4 mb-3">
+    <div class="kpi"><b>{{ stats.total }}</b><span>Тойргийн асуудал</span></div>
+    <div class="kpi"><b>{{ stats.assigned }}</b><span>Надад оноогдсон</span></div>
+    <div class="kpi green"><b>{{ stats.resolved }}</b><span>Шийдвэрлэсэн</span></div>
+    <div class="kpi"><b>{{ stats.avg_resolution }}</b><span>Дундаж шийдвэрлэх хугацаа</span></div>
+  </div>
+  <div class="grid-2">
+    <form class="card" method="post" action="/mp/profile" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="card-head"><h3>✏️ Профайл засах</h3></div>
+      <div class="card-body form-grid">
+        <div class="field"><label for="mp-bio">Товч танилцуулга</label><textarea id="mp-bio" name="bio" maxlength="2000">{{ profile.bio if profile else '' }}</textarea></div>
+        <div class="field"><label for="mp-phone">Ажлын утас</label><input id="mp-phone" class="input" name="phone" maxlength="20" value="{{ current_user.phone or '' }}"></div>
+        <div class="field"><label>Профайл зураг</label><input class="input" type="file" name="profile_image" accept="image/*"></div>
+        <button class="btn btn-primary">Хадгалах</button>
+      </div>
+    </form>
+    <div class="card card-pad">
+      <h3>ℹ️ Тойргийн тохиргоо</h3>
+      <p class="small muted">Таны самбарт харагдах асуудлууд дараах дарааллаар эрэмбэлэгдэнэ:</p>
+      <ol class="small" style="padding-left:18px">
+        <li>Танд оноогдсон хороодын асуудал <span class="tier-tag tier-2">Таны хороо</span></li>
+        <li>Тойргийн дүүргийн бусад асуудал <span class="tier-tag tier-1">Тойргийн дүүрэг</span></li>
+        <li>Их дэмжлэгтэй асуудал</li>
+        <li>Өндөр ач холбогдолтой асуудал</li>
+      </ol>
+      <p class="small muted mb-0">Тойрог, хороо, дүүргийн тохиргоог платформын админ өөрчилнө.</p>
+      <div class="mt-2"><a class="btn btn-light btn-sm" href="/profile">🔒 Нууц үг солих</a></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

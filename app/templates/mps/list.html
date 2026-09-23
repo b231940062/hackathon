@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m with context %}
+{% block title %}УИХ-ын гишүүд{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="admin-head">
+    <div><span class="eyebrow">Ил тод байдал</span><h1>🏛️ УИХ-ын гишүүдийн гүйцэтгэл</h1>
+      <p class="muted mb-0">Гишүүн бүр тойргийнхоо асуудлыг хэрхэн хүлээн авч, шийдвэрлэж буйг харьцуулна уу.</p></div>
+  </div>
+  <div class="grid-3">
+    {% for c in cards %}
+    <a class="card mp-card" href="/mps/{{ c.user.id }}" style="color:inherit">
+      <div class="top">{{ m.avatar(c.user, 'avatar-lg ring') }}<div><b>{{ c.user.full_name }}</b><div class="xs muted">{{ c.profile.constituency }}</div></div></div>
+      <div class="xs muted">{{ c.profile.position }}</div>
+      <div class="kv">
+        <div><b>{{ c.stats.total }}</b><span>Асуудал</span></div>
+        <div><b>{{ c.stats.resolved }}</b><span>Шийдсэн</span></div>
+        <div><b>{{ c.stats.avg_response }}</b><span>Хариу өгөх</span></div>
+      </div>
+      <div class="flex between small"><span class="muted">Шийдвэрлэлт</span><b>{{ c.stats.resolved_pct }}%</b></div>
+      <div class="progress"><i style="width: {{ c.stats.resolved_pct }}%"></i></div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

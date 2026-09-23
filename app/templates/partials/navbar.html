@@ -1,0 +1,70 @@
+{% import "partials/macros.html" as m with context %}
+{% set view = request.query_params.get('view', '') %}
+{% macro nav(href, label, active, count=0) -%}
+<a href="{{ href }}" class="{{ 'active' if active else '' }}" {% if active %}aria-current="page"{% endif %}>{{ label }}{% if count %} <span class="count">{{ count }}</span>{% endif %}</a>
+{%- endmacro %}
+<header class="navbar">
+  <div class="container">
+    {% set home = '/mp' if current_user and current_user.is_mp else ('/admin' if current_user and current_user.is_admin else '/') %}
+    <a class="brand" href="{{ home }}" aria-label="Холбоос нүүр">
+      {% include "partials/logo.html" %}
+      <span class="brand-name">ХОЛБООС<small>Иргэн ↔ УИХ-ын гишүүн</small></span>
+    </a>
+    {% if current_user and current_user.is_mp %}<span class="brand-role">Гишүүний самбар</span>{% endif %}
+    {% if current_user and current_user.is_admin %}<span class="brand-role admin">Админ</span>{% endif %}
+
+    <nav class="nav-links" id="nav-links" aria-label="Үндсэн цэс">
+      {% if current_user and current_user.is_mp %}
+        {{ nav('/mp', '📊 Dashboard', path == '/mp') }}
+        {{ nav('/mp/issues?view=constituency', 'Миний тойргийн асуудлууд', path == '/mp/issues' and view in ('', 'constituency', 'urgent')) }}
+        {{ nav('/mp/issues?view=new', 'Шинэ асуудлууд', path == '/mp/issues' and view == 'new') }}
+        {{ nav('/mp/issues?view=active', 'Шийдвэрлэж буй', path == '/mp/issues' and view == 'active') }}
+        {{ nav('/mp/issues?view=resolved', 'Шийдвэрлэсэн', path == '/mp/issues' and view == 'resolved') }}
+        {{ nav('/mp/profile', 'Профайл', path == '/mp/profile') }}
+      {% elif current_user and current_user.is_admin %}
+        {{ nav('/admin', '📊 Dashboard', path == '/admin') }}
+        {{ nav('/admin/users', 'Хэрэглэгчид', path.startswith('/admin/users')) }}
+        {{ nav('/admin/mps', 'УИХ-ын гишүүд', path.startswith('/admin/mps')) }}
+        {{ nav('/admin/issues', 'Асуудлууд', path.startswith('/admin/issues')) }}
+        {{ nav('/admin/comments', 'Сэтгэгдэл', path.startswith('/admin/comments')) }}
+        {{ nav('/admin/reports', 'Тайлан', path.startswith('/admin/reports')) }}
+        {{ nav('/admin/settings', 'Тохиргоо', path.startswith('/admin/settings')) }}
+      {% elif current_user %}
+        {{ nav('/', 'Нүүр', path == '/') }}
+        {{ nav('/issues', 'Асуудлууд', path == '/issues' or path == '/map') }}
+        {{ nav('/issues/new', '＋ Асуудал мэдээлэх', path == '/issues/new') }}
+        {{ nav('/my-issues', 'Миний асуудлууд', path == '/my-issues') }}
+        {{ nav('/notifications', 'Мэдэгдэл', path == '/notifications', unread_count) }}
+        {{ nav('/profile', 'Профайл', path == '/profile') }}
+      {% else %}
+        {{ nav('/', 'Нүүр', path == '/') }}
+        {{ nav('/issues', 'Асуудлууд', path == '/issues') }}
+        {{ nav('/map', 'Газрын зураг', path == '/map') }}
+        {{ nav('/mps', 'УИХ-ын гишүүд', path.startswith('/mps')) }}
+      {% endif %}
+    </nav>
+
+    <div class="nav-right">
+      {% if current_user %}
+        <a class="icon-btn" href="/notifications" aria-label="Мэдэгдэл ({{ unread_count }} уншаагүй)" title="Мэдэгдэл">🔔{% if unread_count %}<span class="dot">{{ unread_count if unread_count < 100 else '99+' }}</span>{% endif %}</a>
+        <details class="user-menu">
+          <summary aria-label="Хэрэглэгчийн цэс">{{ m.avatar(current_user, 'avatar-sm') }}<span class="uname small"><b>{{ current_user.full_name }}</b></span></summary>
+          <div class="menu">
+            <div class="menu-head"><b>{{ current_user.full_name }}</b><div class="muted xs">{{ current_user.email }}</div><span class="role-badge {{ current_user.role }}">{{ current_user.role_label }}</span></div>
+            {% if current_user.is_mp %}<a href="/mp/profile">👤 Миний профайл</a><a href="/mps/{{ current_user.id }}">🌐 Нийтийн профайл</a>
+            {% else %}<a href="/profile">👤 Миний профайл</a>{% endif %}
+            {% if current_user.is_citizen %}<a href="/my-issues">📋 Миний асуудлууд</a>{% endif %}
+            <a href="/issues">📰 Бүх асуудлууд</a>
+            <a href="/map">🗺️ Газрын зураг</a>
+            <a href="/mps">🏛️ УИХ-ын гишүүд</a>
+            <form method="post" action="/logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit">🚪 Гарах</button></form>
+          </div>
+        </details>
+      {% else %}
+        <a class="btn btn-ghost btn-sm" href="/login">Нэвтрэх</a>
+        <a class="btn btn-primary btn-sm" href="/register">Бүртгүүлэх</a>
+      {% endif %}
+      <button class="icon-btn nav-toggle" type="button" aria-controls="nav-links" aria-expanded="false" aria-label="Цэс">☰</button>
+    </div>
+  </div>
+</header>

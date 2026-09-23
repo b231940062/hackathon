@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m with context %}
+{% block title %}Бүртгүүлэх{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-side">
+    <span class="eyebrow" style="color:var(--gold)">ХОЛБООС</span>
+    <h2>Таны дуу хоолой шийдэлд хүрэх ёстой.</h2>
+    <p>Бүртгүүлснээр та асуудал мэдээлэх, бусдын асуудлыг дэмжих, шийдвэрлэлтийг баталгаажуулах боломжтой болно.</p>
+    <ul>
+      <li><span>🔒</span>Нууц үг Argon2-оор шифрлэгдэнэ</li>
+      <li><span>📍</span>Дүүрэг, хороогоо сонговол тойргийн гишүүн тань тодорхой болно</li>
+      <li><span>🔔</span>Асуудлын явцын талаар мэдэгдэл авна</li>
+    </ul>
+  </div>
+  <div class="auth-main">
+    <div class="auth-card">
+      <h1>Бүртгүүлэх</h1>
+      <p class="muted">Бүртгэлтэй юу? <a href="/login">Нэвтрэх</a></p>
+      {% if not allow %}<div class="alert alert-warn">Шинэ бүртгэл түр хаалттай байна.</div>{% endif %}
+      {% if errors %}<div class="alert alert-error" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
+      <form class="form-grid" method="post" action="/register">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="field"><label for="r-name">Овог нэр <span class="req">*</span></label><input id="r-name" class="input" name="full_name" required maxlength="120" value="{{ form.full_name or '' }}" placeholder="Жишээ: Б.Сарнай"></div>
+        <div class="form-row">
+          <div class="field"><label for="r-email">Имэйл <span class="req">*</span></label><input id="r-email" class="input" type="email" name="email" required maxlength="255" value="{{ form.email or '' }}" autocomplete="email"></div>
+          <div class="field"><label for="r-phone">Утас</label><input id="r-phone" class="input" name="phone" maxlength="20" value="{{ form.phone or '' }}" placeholder="99112233"></div>
+        </div>
+        {{ m.district_selects(districts, form.district_id, form.khoroo_id, required=False) }}
+        <div class="form-row">
+          <div class="field"><label for="r-pw">Нууц үг <span class="req">*</span></label><input id="r-pw" class="input" type="password" name="password" required minlength="8" autocomplete="new-password"><div class="hint">8+ тэмдэгт, үсэг ба тоо</div></div>
+          <div class="field"><label for="r-pw2">Нууц үг давтах <span class="req">*</span></label><input id="r-pw2" class="input" type="password" name="password2" required minlength="8" autocomplete="new-password"></div>
+        </div>
+        <button class="btn btn-primary btn-lg btn-block" {% if not allow %}disabled{% endif %}>Бүртгүүлэх</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

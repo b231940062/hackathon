@@ -1,0 +1,7 @@
+{% import "partials/macros.html" as m with context %}
+{% for issue in issues %}{{ m.issue_card(issue, supported) }}{% endfor %}
+{% if has_more %}
+<div class="load-more js-load-more-wrap">
+  <button class="btn btn-light js-load-more" type="button" data-next="{{ page + 1 }}">Цааш үзэх ↓</button>
+</div>
+{% endif %}

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m with context %}
+{% block title %}Аудит #{{ issue.id }}{% endblock %}
+{% block content %}
+<div class="container" style="max-width:1320px">
+  <nav class="breadcrumb"><a href="/admin">Админ</a><span>›</span><a href="/admin/issues">Асуудлууд</a><span>›</span><span>Аудит #{{ issue.id }}</span></nav>
+  <div class="admin-head">
+    <div><span class="eyebrow">Бүрэн үйл явцын аудит</span><h1>{{ issue.title }}</h1>
+      <div class="flex flex-wrap">{{ m.status_badge(issue.status, lg=True) }}{{ m.prio_pill(issue.priority_score) }}{{ m.cat_chip(issue.category) }}<span class="chip">📍 {{ issue.location_label }}</span></div></div>
+    <div class="flex flex-wrap">
+      <a class="btn btn-light" href="/issues/{{ issue.id }}">👁 Нийтийн хуудас</a>
+      <form method="post" action="/admin/issues/{{ issue.id }}/delete" data-confirm="Энэ асуудлыг бүх холбогдох өгөгдлийн хамт устгах уу? Буцаах боломжгүй." data-confirm-title="Асуудал устгах">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn btn-danger">🗑 Устгах</button></form>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><span class="k-ico">👍</span><b>{{ issue.support_count }}</b><span>Дэмжлэг</span></div>
+    <div class="kpi"><span class="k-ico">💬</span><b>{{ issue.comment_count }}</b><span>Сэтгэгдэл</span></div>
+    <div class="kpi"><span class="k-ico">🏛️</span><b>{{ issue.official_responses|length }}</b><span>Албан хариу</span></div>
+    <div class="kpi"><span class="k-ico">🔄</span><b>{{ issue.history|length }}</b><span>Төлөвийн өөрчлөлт</span></div>
+    <div class="kpi"><span class="k-ico">⏱️</span><b>{% if issue.received_at %}{{ ((issue.received_at - issue.created_at).total_seconds() / 3600)|round(1) }}ц{% else %}—{% endif %}</b><span>Хүлээн авах хугацаа</span></div>
+    <div class="kpi green"><span class="k-ico">✅</span><b>{{ conf.yes }}/{{ conf.total }}</b><span>Баталгаажуулалт</span></div>
+  </div>
+
+  <div class="dash-grid">
+    <div class="stack">
+      <section class="card">
+        <div class="card-head"><h2>📍 Явц</h2></div>
+        <div class="card-body">
+          <div class="stepper">
+            {% for st in timeline %}<div class="step {{ st.state }}"><div class="dot"><span>{{ st.icon }}</span></div><div><b>{{ st.label }}</b><small>{{ st.at|date if st.at else '' }}</small></div></div>{% endfor %}
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-head"><h2>📜 Бүрэн үйл явдлын бүртгэл</h2><span class="xs muted">{{ activity|length }} үйл явдал · цагийн дарааллаар</span></div>
+        <div class="card-body">
+          <ul class="activity">
+            {% for e in activity %}
+            <li>
+              {% if e.type == 'status' %}
+                <span class="ai {{ 'green' if e.status == 'RESOLVED' else 'gold' }}">{{ e.info.icon }}</span>
+                <div><div class="ab"><b>{{ e.actor.full_name if e.actor else 'Систем' }}</b> <span class="role-badge {{ e.actor.role if e.actor else '' }}">{{ e.actor.role_label if e.actor else '' }}</span> — {% if e.old %}{{ STATUS_INFO[e.old].label }} → {% endif %}<b>{{ e.info.label }}</b></div>
+                  <div class="at">{{ e.at|datetime }}</div>{% if e.note %}<div class="an">{{ e.note }}</div>{% endif %}</div>
+              {% elif e.type == 'response' %}
+                <span class="ai">🏛️</span>
+                <div><div class="ab"><b>{{ e.actor.full_name if e.actor else 'Гишүүн' }}</b> — {{ e.kind_label }}{% if e.organization %} → <b>{{ e.organization }}</b>{% endif %}</div>
+                  <div class="at">{{ e.at|datetime }}</div><div class="an">“{{ e.content }}”</div></div>
+              {% elif e.type == 'confirmation' %}
+                <span class="ai {{ 'green' if e.is_resolved else 'red' }}">{{ '✔' if e.is_resolved else '⚠' }}</span>
+                <div><div class="ab"><b>{{ e.actor.full_name if e.actor else 'Иргэн' }}</b> — {{ 'шийдэгдсэн гэж баталгаажуулав' if e.is_resolved else 'шийдэгдээгүй гэж мэдэгдэв' }}</div>
+                  <div class="at">{{ e.at|datetime }}</div>{% if e.reason %}<div class="an">{{ e.reason }}</div>{% endif %}</div>
+              {% elif e.type == 'comment' %}
+                <span class="ai">💬</span>
+                <div class="grow"><div class="ab"><b>{{ e.actor.full_name if e.actor else 'Хэрэглэгч' }}</b> сэтгэгдэл бичив {% if e.hidden %}<span class="chip chip-red">Нуусан</span>{% endif %}</div>
+                  <div class="at">{{ e.at|datetime }}</div><div class="an">{{ e.content }}</div>
+                  <div class="flex mt-1" style="gap:6px">
+                    <form method="post" action="/admin/comments/{{ e.id }}/{{ 'unhide' if e.hidden else 'hide' }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="next" value="/admin/issues/{{ issue.id }}"><button class="btn btn-light btn-sm">{{ '↺ Сэргээх' if e.hidden else '🙈 Нуух' }}</button></form>
+                    <form method="post" action="/admin/comments/{{ e.id }}/delete" data-confirm="Энэ сэтгэгдлийг устгах уу?" data-confirm-title="Сэтгэгдэл устгах"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="next" value="/admin/issues/{{ issue.id }}"><button class="btn btn-danger-soft btn-sm">🗑</button></form>
+                  </div></div>
+              {% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </section>
+    </div>
+
+    <div class="stack">
+      <section class="card">
+        <div class="card-head"><h3>🏛️ Хариуцах гишүүн</h3></div>
+        <form class="card-body form-grid" method="post" action="/admin/issues/{{ issue.id }}/assign">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <select name="mp_id" aria-label="Гишүүн сонгох">
+            <option value="">— Хариуцагчгүй —</option>
+            {% for p in mps %}<option value="{{ p.user_id }}" {% if p.user_id == issue.mp_id %}selected{% endif %}>{{ p.user.full_name }} · {{ p.district.name if p.district else '' }}</option>{% endfor %}
+          </select>
+          <button class="btn btn-primary">Оноох</button>
+        </form>
+      </section>
+      <section class="card">
+        <div class="card-head"><h3>📄 Мэдээлэл</h3></div>
+        <div class="card-body small">
+          {% if issue.cover_image %}<img src="/static/{{ issue.cover_image }}" alt="" style="border-radius:12px;margin-bottom:12px">{% endif %}
+          <p><b>Мэдээлсэн:</b> {{ issue.author.full_name if issue.author else 'Устгагдсан хэрэглэгч' }}{% if issue.author %} ({{ issue.author.email }}){% endif %}</p>
+          <p><b>Огноо:</b> {{ issue.created_at|datetime }}</p>
+          <p><b>Яаралтай:</b> {{ issue.urgency_label }} · <b>Хүрээ:</b> {{ issue.scope_label }}</p>
+          <p><b>Байгууллага:</b> {{ issue.forwarded_to or '—' }}</p>
+          <p class="mb-0 pre-line">{{ issue.description }}</p>
+        </div>
+      </section>
+      {% if issue.after_image %}
+      <section class="card"><div class="card-head"><h3>🖼️ Өмнө / Дараа</h3></div><div class="card-body"><div class="ba-thumb" style="border-radius:12px;overflow:hidden"><img src="/static/{{ issue.before_image }}" alt="Өмнө"><img src="/static/{{ issue.after_image }}" alt="Дараа"><span class="b">ӨМНӨ</span><span class="a">ДАРАА</span></div></div></section>
+      {% endif %}
+      <section class="card">
+        <div class="card-head"><h3>👍 Сүүлийн дэмжигчид</h3><span class="xs muted">нийт {{ issue.support_count }}</span></div>
+        <ol class="rank-list">{% for s in supporters %}<li><a href="/admin/users/{{ s.user_id }}/edit">{{ m.avatar(s.user, 'avatar-xs') }}<span><span class="t">{{ s.user.full_name }}</span><span class="m">{{ s.created_at|timeago }}</span></span></a></li>{% endfor %}</ol>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}

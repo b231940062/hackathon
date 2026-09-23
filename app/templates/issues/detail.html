@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m with context %}
+{% block title %}{{ issue.title }}{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer></script>
+{% endblock %}
+{% block content %}
+<div class="container">
+  <nav class="breadcrumb" aria-label="Зам">
+    <a href="/">Нүүр</a><span>›</span><a href="/issues">Асуудлууд</a><span>›</span>
+    <a href="/issues?category={{ issue.category }}">{{ issue.category_info.icon }} {{ issue.category_info.label }}</a><span>›</span>
+    <span>#{{ issue.id }}</span>
+  </nav>
+
+  <div class="detail-layout">
+    <div class="stack">
+      <!-- ============ Үндсэн мэдээлэл ============ -->
+      <article class="card detail-hero">
+        <div class="detail-img">
+          {% if issue.cover_image %}<img src="/static/{{ issue.cover_image }}" alt="{{ issue.title }}">
+          {% else %}<div class="no-img">{{ issue.category_info.icon }}</div>{% endif %}
+          <div class="overlay">{{ m.status_badge(issue.status, lg=True) }}{{ m.prio_pill(issue.priority_score) }}{% if issue.urgency == 'critical' %}<span class="chip chip-red">🚨 Яаралтай</span>{% endif %}</div>
+        </div>
+        <div class="detail-main">
+          <div class="flex">
+            {{ m.avatar(issue.author) }}
+            <div class="grow"><b>{{ issue.author.full_name if issue.author else 'Устгагдсан хэрэглэгч' }}</b>
+              <div class="xs muted">Иргэн · {{ issue.created_at|datetime }} ({{ issue.created_at|timeago }})</div></div>
+            {{ m.cat_chip(issue.category) }}
+          </div>
+          <h1>{{ issue.title }}</h1>
+          <p class="detail-desc">{{ issue.description }}</p>
+          <div class="meta-grid">
+            <div class="meta-item"><span class="i">📍</span><div><small>Байршил</small><b>{{ issue.location or '—' }}</b></div></div>
+            <div class="meta-item"><span class="i">🏙️</span><div><small>Дүүрэг / Хороо</small><b>{{ issue.district.name }}{% if issue.khoroo %}, {{ issue.khoroo.label }}{% endif %}</b></div></div>
+            <div class="meta-item"><span class="i">📅</span><div><small>Мэдээлсэн огноо</small><b>{{ issue.created_at|date }}</b></div></div>
+            <div class="meta-item"><span class="i">🚦</span><div><small>Яаралтай байдал</small><b>{{ issue.urgency_label }}</b></div></div>
+            <div class="meta-item"><span class="i">👥</span><div><small>Нөлөөллийн хүрээ</small><b>{{ issue.scope_label }}</b></div></div>
+            <div class="meta-item"><span class="i">🏢</span><div><small>Шилжүүлсэн байгууллага</small><b>{{ issue.forwarded_to or '—' }}</b></div></div>
+          </div>
+          <div class="detail-stats">
+            {% set mine = is_author %}
+            {% if current_user and not current_user.is_citizen %}
+              <button class="big-support" disabled title="Зөвхөн иргэд дэмжинэ"><span class="ico">👍</span><span><b class="js-support-count" data-id="{{ issue.id }}">{{ issue.support_count }}</b> дэмжигч</span></button>
+            {% elif mine %}
+              <button class="big-support supported" disabled><span class="ico">👍</span><span><b class="js-support-count" data-id="{{ issue.id }}">{{ issue.support_count }}</b> дэмжигч · Таны асуудал</span></button>
+            {% else %}
+              <button class="big-support js-support{% if supported %} supported{% endif %}" data-id="{{ issue.id }}" data-big="1" aria-pressed="{{ 'true' if supported else 'false' }}"><span class="ico">👍</span><span><b class="js-support-count" data-id="{{ issue.id }}">{{ issue.support_count }}</b> дэмжигч · <span class="lbl">{% if supported %}Дэмжсэн{% else %}Дэмжих{% endif %}</span></span></button>
+            {% endif %}
+            <a class="btn btn-light" href="#comments">💬 <span class="js-comment-count" data-id="{{ issue.id }}">{{ issue.comment_count }}</span> сэтгэгдэл</a>
+            <button class="btn btn-ghost js-copy" type="button" data-copy="{{ request.url }}">🔗 Хуваалцах</button>
+            {% if current_user and current_user.is_admin %}<a class="btn btn-ghost" href="/admin/issues/{{ issue.id }}">🛡️ Аудит</a>{% endif %}
+          </div>
+        </div>
+      </article>
+
+      <!-- ============ Статусын явц ============ -->
+      <section class="card" id="timeline">
+        <div class="card-head"><h2>📍 Шийдвэрлэлтийн явц</h2><span class="small muted">Сүүлд шинэчилсэн: {{ issue.updated_at|timeago }}</span></div>
+        <div class="card-body">
+          <div class="stepper" role="list">
+            {% for st in timeline %}
+            <div class="step {{ st.state }}" role="listitem" title="{{ st.hint }}">
+              <div class="dot"><span>{{ st.icon }}</span></div>
+              <div><b>{{ st.label }}</b><small>{% if st.at %}{{ st.at|date }}{% elif st.state == 'skipped' %}алгассан{% elif st.state == 'upcoming' %}хүлээгдэж буй{% endif %}</small></div>
+            </div>
+            {% endfor %}
+          </div>
+          {% if issue.is_resolved %}
+          <div class="resolved-banner"><span style="font-size:1.6rem">🟢</span><div><b>ШИЙДВЭРЛЭСЭН</b><div class="small">{{ issue.resolved_at|date }} · Мэдээлснээс хойш {{ ((issue.resolved_at - issue.created_at).days) }} хоногт шийдвэрлэгдлээ</div></div><a class="btn btn-light btn-sm" style="margin-left:auto" href="#resolution">Нотлох баримт ↓</a></div>
+          {% endif %}
+          <details class="mt-3" {% if activity|length <= 6 %}open{% endif %}>
+            <summary class="link-btn">📜 Үйл явцын бүрэн түүх ({{ activity|length }})</summary>
+            <ul class="activity mt-2">
+              {% for e in activity %}
+              <li>
+                {% if e.type == 'status' %}
+                  <span class="ai {{ 'green' if e.status == 'RESOLVED' else ('gold' if e.status != 'NEW' else '') }}">{{ e.info.icon }}</span>
+                  <div><div class="ab"><b>{{ e.actor.full_name if e.actor else 'Систем' }}</b> — {% if e.status == 'NEW' %}асуудлыг мэдээллээ{% else %}төлөвийг <b>{{ e.info.label }}</b> болгов{% endif %}</div>
+                    <div class="at">{{ e.at|datetime }}</div>{% if e.note and e.status != 'NEW' %}<div class="an">{{ e.note }}</div>{% endif %}</div>
+                {% elif e.type == 'response' %}
+                  <span class="ai">🏛️</span>
+                  <div><div class="ab"><b>{{ e.actor.full_name if e.actor else 'УИХ-ын гишүүн' }}</b> — {{ e.kind_label|lower }}{% if e.organization %}: <b>{{ e.organization }}</b>{% endif %}</div><div class="at">{{ e.at|datetime }}</div></div>
+                {% elif e.type == 'confirmation' %}
+                  <span class="ai {{ 'green' if e.is_resolved else 'red' }}">{{ '✔' if e.is_resolved else '⚠' }}</span>
+                  <div><div class="ab"><b>{{ e.actor.full_name if e.actor else 'Иргэн' }}</b> — {% if e.is_resolved %}бодитоор шийдэгдсэн гэж баталгаажуулав{% else %}асуудал хэвээр байна гэж мэдэгдэв{% endif %}</div><div class="at">{{ e.at|datetime }}</div></div>
+                {% endif %}
+              </li>
+              {% endfor %}
+            </ul>
+          </details>
+        </div>
+      </section>
+
+      <!-- ============ Албан ёсны хариу ============ -->
+      <section class="card" id="responses">
+        <div class="card-head"><h2>🏛️ Албан ёсны хариу</h2><span class="chip chip-brand">{{ issue.official_responses|length }}</span></div>
+        <div class="card-body">
+          {% for r in issue.official_responses|reverse %}
+          <div class="official {{ r.kind }}">
+            <div class="o-head">
+              <div class="o-seal">{% if r.kind == 'forward' %}📨{% elif r.kind == 'update' %}🛠️{% elif r.kind == 'resolution' %}✅{% else %}🏛️{% endif %}</div>
+              <div class="grow"><div class="o-title">{% if r.kind == 'response' %}АЛБАН ЁСНЫ ХАРИУ{% else %}{{ r.kind_label|upper }}{% endif %}</div>
+                <div class="o-by"><b>{{ r.author.full_name if r.author else 'УИХ-ын гишүүн' }}</b>{% if r.author and r.author.mp_profile %} · {{ r.author.mp_profile.position }}{% endif %}</div></div>
+              <span class="xs muted nowrap">{{ r.created_at|datetime }}</span>
+            </div>
+            <p class="o-text">“{{ r.content }}”</p>
+            {% if r.organization %}<span class="o-org">📨 Хүлээн авсан байгууллага: {{ r.organization }}</span>{% endif %}
+          </div>
+          {% else %}
+          {{ m.empty('⏳', 'Албан хариу хараахан ирээгүй', 'Хариуцах гишүүн асуудлыг хүлээн авч хариу өгөхөд энд харагдана. Дэмжлэг нэмэгдэх тусам ач холбогдол өснө.') }}
+          {% endfor %}
+        </div>
+      </section>
+
+      <!-- ============ Шийдвэрлэлт ба баталгаажуулалт ============ -->
+      {% if issue.resolution %}
+      {% set res = issue.resolution %}
+      <section class="card" id="resolution">
+        <div class="card-head"><h2>✅ Шийдвэрлэлтийн нотлох баримт</h2>{% if issue.is_resolved %}<span class="status status-green status-lg">ШИЙДВЭРЛЭСЭН</span>{% else %}<span class="chip chip-gold">Дахин нээгдсэн</span>{% endif %}</div>
+        <div class="card-body">
+          {% if issue.after_image %}
+          <div class="ba-slider js-ba">
+            <img src="/static/{{ issue.after_image }}" alt="Шийдвэрлэсний дараа">
+            <img class="ba-before" src="/static/{{ issue.before_image }}" alt="Шийдвэрлэхээс өмнө">
+            <span class="lbl b">ӨМНӨ</span><span class="lbl a">ДАРАА</span>
+            <div class="ba-line"></div><div class="ba-knob">⇆</div>
+            <input type="range" min="0" max="100" value="50" aria-label="Өмнө / дараах зургийг харьцуулах">
+          </div>
+          <p class="xs muted center mt-1">↔ Гулсуулж өмнө ба дараах байдлыг харьцуулна уу</p>
+          {% endif %}
+          <div class="res-facts">
+            <div><small>Хийгдсэн ажил</small>{{ res.action_taken }}</div>
+            <div><small>Тайлбар</small>{{ res.explanation }}</div>
+            <div><small>Шийдвэрлэсэн огноо</small><b>{{ res.resolved_on|date }}</b></div>
+            <div><small>Хариуцсан</small><b>{{ res.resolved_by.full_name if res.resolved_by else '—' }}</b>{% if issue.forwarded_to %}<div class="xs muted">{{ issue.forwarded_to }}</div>{% endif %}</div>
+          </div>
+
+          <div class="mt-3">
+            <div class="flex between small"><b>Иргэдийн баталгаажуулалт</b><span class="muted">{{ conf.yes }} тийм · {{ conf.no }} үгүй</span></div>
+            <div class="vote-bar">{% if conf.total %}<i class="y" style="width:{{ conf.yes_pct }}%"></i><i class="n" style="width:{{ 100 - conf.yes_pct }}%"></i>{% endif %}</div>
+            {% if conf.total %}<div class="xs muted">{{ conf.yes_pct }}% нь бодитоор шийдэгдсэн гэж баталгаажуулсан{% if conf.author_answer is not none %} · Мэдээлсэн иргэн: <b>{{ 'Тийм ✔' if conf.author_answer else 'Үгүй ⚠' }}</b>{% endif %}</div>
+            {% else %}<div class="xs muted">Одоогоор баталгаажуулалт ирээгүй байна.</div>{% endif %}
+          </div>
+
+          {% if issue.is_resolved %}
+            {% if current_user and current_user.is_citizen %}
+              {% if my_conf %}
+              <div class="confirm-result {{ 'yes' if my_conf.is_resolved else 'no' }}">
+                <span style="font-size:1.5rem">{{ '✅' if my_conf.is_resolved else '⚠️' }}</span>
+                <div class="grow">Та “{{ 'Тийм, шийдэгдсэн' if my_conf.is_resolved else 'Үгүй, асуудал хэвээр байна' }}” гэж хариулсан.{% if my_conf.reason %}<div class="small">Шалтгаан: {{ my_conf.reason }}</div>{% endif %}</div>
+                <button class="btn btn-light btn-sm js-toggle" data-target="#confirm-box" type="button">Хариугаа өөрчлөх</button>
+              </div>
+              {% endif %}
+              <div class="confirm-box" id="confirm-box" {% if my_conf %}hidden{% endif %}>
+                <h3>🤔 Энэ асуудал бодитоор шийдэгдсэн үү?</h3>
+                <p class="small mb-0" style="opacity:.85">{% if is_author %}Та энэ асуудлыг мэдээлсэн тул таны баталгаажуулалт хамгийн чухал.{% else %}Таны хариу шийдвэрлэлтийн чанарыг ил тод болгоно.{% endif %}</p>
+                <div class="btns">
+                  <form method="post" action="/issues/{{ issue.id }}/confirm"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="answer" value="yes"><button class="btn btn-success btn-lg">✅ Тийм, шийдэгдсэн</button></form>
+                  <button class="btn btn-no btn-lg js-toggle" type="button" data-target="#dispute-form">❌ Үгүй, асуудал хэвээр байна</button>
+                </div>
+                <form id="dispute-form" class="mt-2 form-grid" method="post" action="/issues/{{ issue.id }}/confirm" enctype="multipart/form-data" hidden>
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="answer" value="no">
+                  <textarea name="reason" required minlength="5" maxlength="1000" placeholder="Юу нь шийдэгдээгүй байна вэ? Дэлгэрэнгүй бичнэ үү."></textarea>
+                  <label class="small">📷 Одоогийн байдлын зураг (заавал биш)<input class="input mt-1" type="file" name="image" accept="image/*"></label>
+                  <button class="btn btn-danger">Илгээх</button>
+                </form>
+              </div>
+            {% elif not current_user %}
+              <div class="alert alert-info mt-2">Шийдвэрлэлтийг баталгаажуулахын тулд <a href="/login?next=/issues/{{ issue.id }}">нэвтэрнэ үү</a>.</div>
+            {% endif %}
+          {% endif %}
+
+          {% for c in issue.confirmations if not c.is_resolved %}
+          <div class="dispute"><b>⚠️ {{ c.user.full_name if c.user else 'Иргэн' }}</b>{% if c.user_id == issue.author_id %} <span class="chip chip-red">Мэдээлсэн иргэн</span>{% endif %}: {{ c.reason }} <span class="xs muted">· {{ c.created_at|timeago }}</span>
+            {% if c.image_path %}<img src="/static/{{ c.image_path }}" alt="Иргэний оруулсан зураг" style="max-height:180px;border-radius:10px;margin-top:8px">{% endif %}</div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      <!-- ============ Сэтгэгдэл ============ -->
+      <section class="card" id="comments">
+        <div class="card-head"><h2>💬 Иргэдийн сэтгэгдэл <span class="muted">(<span class="js-comment-count" data-id="{{ issue.id }}">{{ issue.comment_count }}</span>)</span></h2></div>
+        <div class="card-body">
+          {% if current_user %}
+          <form class="comment-form js-comment-form" method="post" action="/issues/{{ issue.id }}/comments" data-id="{{ issue.id }}" data-prepend="1">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            {{ m.avatar(current_user, 'avatar-sm') }}
+            <textarea name="content" rows="2" maxlength="1000" placeholder="Сэтгэгдэл бичих..." required></textarea>
+            <button class="btn btn-primary">Илгээх</button>
+          </form>
+          {% else %}
+          <p class="muted">Сэтгэгдэл үлдээхийн тулд <a href="/login?next=/issues/{{ issue.id }}">нэвтэрнэ үү</a>.</p>
+          {% endif %}
+          <div class="comments-list mt-3 js-new-comments"></div>
+          <div class="comments-list mt-2">
+            {% for c in issue.comments|reverse %}
+              {% if c.is_hidden and not (current_user and current_user.is_admin) %}
+              <div class="comment hidden-c"><span class="avatar avatar-sm" style="background:#cbd5e1">·</span><div class="grow"><div class="bubble">Энэ сэтгэгдлийг модератор нуусан байна.</div></div></div>
+              {% else %}
+              <div class="comment {{ 'mp' if c.user and c.user.is_mp else '' }}{{ ' hidden-c' if c.is_hidden else '' }}">
+                {{ m.avatar(c.user, 'avatar-sm') }}
+                <div class="grow">
+                  <div class="bubble"><b>{{ c.user.full_name if c.user else 'Хэрэглэгч' }}</b>{% if c.user and not c.user.is_citizen %} <span class="role-badge {{ c.user.role }}">{{ c.user.role_label }}</span>{% endif %}{% if c.user_id == issue.author_id %} <span class="role-badge">Мэдээлсэн</span>{% endif %}{% if c.is_hidden %} <span class="chip chip-red">Нуусан</span>{% endif %}
+                    <p>{{ c.content }}</p></div>
+                  <div class="ctime">{{ c.created_at|timeago }}</div>
+                </div>
+              </div>
+              {% endif %}
+            {% else %}
+              <div class="js-no-comments">{{ m.empty('💬', 'Сэтгэгдэл алга', 'Эхний сэтгэгдлийг та үлдээгээрэй.') }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ============ Хажуугийн багана ============ -->
+    <aside class="stack">
+      {% if current_user and current_user.is_mp %}
+        {% if can_manage or can_claim %}
+          {% include "issues/_mp_panel.html" %}
+        {% else %}
+          <div class="card card-pad"><b>🏛️ Гишүүний мэдээлэл</b><p class="small muted mb-0 mt-1">Энэ асуудал {% if issue.mp %}<b>{{ issue.mp.full_name }}</b> гишүүний{% else %}өөр гишүүний{% endif %} хариуцлагад байна. Та зөвхөн үзэх боломжтой.</p></div>
+        {% endif %}
+      {% endif %}
+
+      <div class="card">
+        <div class="card-head"><h3>⚡ Ач холбогдлын оноо</h3></div>
+        <div class="card-body">
+          {% set lv = priority_level(issue.priority_score) %}
+          <div class="gauge">
+            <svg viewBox="0 0 150 84" aria-hidden="true">
+              <defs><linearGradient id="gg" x1="0" x2="1"><stop offset="0" stop-color="#22c55e"/><stop offset=".55" stop-color="#f2b01e"/><stop offset="1" stop-color="#d9363e"/></linearGradient></defs>
+              <path d="M12 76 A63 63 0 0 1 138 76" fill="none" stroke="#eef1f6" stroke-width="13" stroke-linecap="round"/>
+              <path d="M12 76 A63 63 0 0 1 138 76" fill="none" stroke="url(#gg)" stroke-width="13" stroke-linecap="round" pathLength="100" stroke-dasharray="{{ issue.priority_score }} 100" class="js-gauge"/>
+            </svg>
+            <div class="val"><span class="js-priority">{{ issue.priority_score }}</span><small>/100</small></div>
+          </div>
+          <div class="center"><span class="prio prio-{{ lv.key }}">{{ lv.label }} ач холбогдол</span></div>
+          <ul class="breakdown">
+            {% for key, label, mx in [('support', '👍 Дэмжлэг', 45), ('comment', '💬 Сэтгэгдэл', 15), ('urgency', '🚦 Яаралтай байдал', 20), ('age', '⏱️ Хугацаа', 10), ('scope', '👥 Нөлөөллийн хүрээ', 10)] %}
+            <li><span>{{ label }}</span><b>{{ breakdown[key]|round|int }}/{{ mx }}</b><div class="progress"><i style="width: {{ (breakdown[key] * 100 / mx)|round|int }}%"></i></div></li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>🏛️ Хариуцах гишүүн</h3></div>
+        <div class="card-body">
+          {% if issue.mp %}
+          <a class="mp-mini" href="/mps/{{ issue.mp.id }}" style="color:inherit">{{ m.avatar(issue.mp, 'avatar-lg ring') }}
+            <div><b>{{ issue.mp.full_name }}</b><div class="xs muted">{{ mp_profile.position if mp_profile else 'УИХ-ын гишүүн' }}</div><div class="xs muted">{{ mp_profile.constituency if mp_profile else '' }}</div></div></a>
+          <div class="small mt-2">{% if issue.status == 'NEW' %}⏳ Гишүүн хүлээн авахыг хүлээж байна{% else %}✅ {{ issue.received_at|date }}-нд хүлээн авсан{% endif %}</div>
+          {% else %}
+          <p class="muted small mb-0">Энэ хороонд оноогдсон гишүүн одоогоор байхгүй. Аль ч гишүүн хүлээн авах боломжтой.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if issue.lat %}
+      <div class="card">
+        <div class="card-head"><h3>🗺️ Байршил</h3><a class="small" href="/map">Газрын зураг</a></div>
+        <div class="card-body" style="padding-top:8px">
+          <div class="picker-map js-mini-map" data-lat="{{ issue.lat }}" data-lng="{{ issue.lng }}" data-color="{{ issue.status_info.color }}"><div class="map-fallback small">📍 {{ issue.location_label }}</div></div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if demo_mode and current_user and not issue.is_resolved %}
+      <div class="card demo-box">
+        <div class="card-head"><h3>🧪 Демо горим</h3></div>
+        <div class="card-body">
+          <p class="small muted mb-0">Амьд үзүүлэнгийн үед олон иргэн дэмжиж буйг симуляци хийнэ (+30 дэмжлэг, 3 сэтгэгдэл).</p>
+          <button class="btn btn-outline js-demo-boost" data-id="{{ issue.id }}" type="button">👥 Иргэдийн дэмжлэг цуглуулах</button>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if similar %}
+      <div class="card">
+        <div class="card-head"><h3>🔁 Төстэй асуудлууд</h3></div>
+        <ol class="rank-list">
+          {% for s in similar %}<li><a href="/issues/{{ s.id }}"><span class="rk">{{ s.category_info.icon }}</span><span><span class="t">{{ s.title }}</span><span class="m">{{ s.location_label }} · 👍 {{ s.support_count }}</span></span></a></li>{% endfor %}
+        </ol>
+      </div>
+      {% endif %}
+    </aside>
+  </div>
+</div>
+{% endblock %}

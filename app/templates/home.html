@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m with context %}
+{% block title %}Таны асуудал хаана хүрснийг мэдээрэй{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="container">
+    <div>
+      <span class="tagline">🔗 Иргэний асуудлаас бодит шийдэл хүртэл.</span>
+      <h1>Таны асуудал <span class="hl">хаана хүрснийг</span> мэдээрэй.</h1>
+      <p class="lead">Асуудлаа мэдээл. Дэмжлэгээ нэгтгэ. Шийдвэрлэлтийг ил тод хяна.</p>
+      <div class="hero-actions">
+        <a class="btn btn-gold btn-lg" href="{{ '/issues/new' if not current_user or current_user.is_citizen else '/issues' }}">＋ Асуудал мэдээлэх</a>
+        <a class="btn btn-light btn-lg" href="/issues">Асуудлуудыг харах →</a>
+      </div>
+      <div class="hero-stats">
+        <div><b>{{ stats.total_issues }}</b><span>мэдээлэгдсэн асуудал</span></div>
+        <div><b>{{ stats.resolved }}</b><span>шийдвэрлэгдсэн</span></div>
+        <div><b>{{ stats.supports }}</b><span>иргэдийн дэмжлэг</span></div>
+        <div><b>{{ mp_count }}</b><span>УИХ-ын гишүүн холбогдсон</span></div>
+      </div>
+    </div>
+    {% set showcase = resolved_issues[0] if resolved_issues else (top_issues[0] if top_issues else None) %}
+    {% if showcase %}
+    <div class="hero-visual">
+      <div class="float-badge two">🏛️ Гишүүн хүлээн авсан</div>
+      <a class="flow-card" href="/issues/{{ showcase.id }}" style="display:block;color:inherit">
+        <div class="fc-head">{{ m.avatar(showcase.author, 'avatar-sm') }}<div class="grow"><b class="small">{{ showcase.author.full_name if showcase.author else '' }}</b><div class="xs muted">📍 {{ showcase.location_label }}</div></div>{{ m.status_badge(showcase.status) }}</div>
+        <div class="fc-img">
+          {% if showcase.after_image %}<div class="ba-thumb" style="height:100%;aspect-ratio:auto"><img src="/static/{{ showcase.before_image }}" alt=""><img src="/static/{{ showcase.after_image }}" alt=""><span class="b">ӨМНӨ</span><span class="a">ДАРАА</span></div>
+          {% elif showcase.cover_image %}<img src="/static/{{ showcase.cover_image }}" alt="">{% endif %}
+        </div>
+        <b>{{ showcase.title }}</b>
+        <div class="mini-steps">{% for s in STATUSES %}<i class="{% if showcase.is_resolved or loop.index0 < showcase.status_index %}on{% elif loop.index0 == showcase.status_index %}cur{% endif %}"></i>{% endfor %}</div>
+        <div class="flex between xs muted mt-1"><span>👍 {{ showcase.support_count }} дэмжигч</span><span>💬 {{ showcase.comment_count }}</span></div>
+      </a>
+      <div class="float-badge one">✅ Иргэд баталгаажуулсан</div>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="container how">
+  <div class="how-grid">
+    <div class="how-step"><div class="n">📝</div><h3>1. Мэдээлэх</h3><p>Зураг, байршилтайгаа асуудлаа 1 минутад мэдээлнэ.</p></div>
+    <div class="how-step"><div class="n">👍</div><h3>2. Дэмжлэг нэгтгэх</h3><p>Хөршүүд дэмжих тусам ач холбогдол нь өснө.</p></div>
+    <div class="how-step"><div class="n">🏛️</div><h3>3. Гишүүн хүлээн авах</h3><p>Тухайн тойргийн гишүүнд шууд очиж, албан хариу өгнө.</p></div>
+    <div class="how-step"><div class="n">📨</div><h3>4. Байгууллагад шилжих</h3><p>Хариуцах төрийн байгууллага ажил гүйцэтгэнэ.</p></div>
+    <div class="how-step"><div class="n">✅</div><h3>5. Шийдэл ба баталгаа</h3><p>Өмнө/дараах зураг нийтлэгдэж, иргэд баталгаажуулна.</p></div>
+  </div>
+</section>
+
+<section class="container home-section">
+  <div class="section-title"><h2>🔥 Топ асуудлууд</h2><a class="see-all" href="/issues?tab=top">Бүгдийг харах →</a></div>
+  <div class="issue-grid">{% for i in top_issues %}{{ m.tile(i, supported) }}{% endfor %}</div>
+</section>
+
+<section class="container home-section">
+  <div class="section-title"><h2>🕒 Шинээр мэдээлэгдсэн</h2><a class="see-all" href="/issues">Мэдээний урсгал →</a></div>
+  <div class="issue-grid">{% for i in recent_issues %}{{ m.tile(i, supported) }}{% endfor %}</div>
+</section>
+
+<section class="container home-section">
+  <div class="section-title"><h2>✅ Саяхан шийдвэрлэгдсэн</h2><a class="see-all" href="/issues?tab=resolved">Бүгдийг харах →</a></div>
+  <div class="issue-grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))">{% for i in resolved_issues %}{{ m.tile(i, supported) }}{% endfor %}</div>
+</section>
+
+<section class="container home-section">
+  <div class="grid-2">
+    <a class="card card-pad flex" href="/map" style="color:inherit;gap:18px">
+      <div style="font-size:2.4rem">🗺️</div>
+      <div><h3 class="mb-0">Асуудлын газрын зураг</h3><p class="muted mb-0">Дүүрэг, хороогоор асуудлуудыг газрын зураг дээрээс харах</p></div>
+    </a>
+    <a class="card card-pad flex" href="/mps" style="color:inherit;gap:18px">
+      <div style="font-size:2.4rem">🏛️</div>
+      <div><h3 class="mb-0">УИХ-ын гишүүдийн гүйцэтгэл</h3><p class="muted mb-0">Гишүүн бүр хэдэн асуудал хүлээн авч, шийдвэрлэснийг ил тод харах</p></div>
+    </a>
+  </div>
+</section>
+{% endblock %}

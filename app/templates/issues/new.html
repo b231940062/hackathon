@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m with context %}
+{% block title %}Асуудал мэдээлэх{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer></script>
+{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="detail-layout">
+    <form class="card" method="post" action="/issues/new" enctype="multipart/form-data" id="issue-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="dup_checked" value="" id="dup-checked">
+      <input type="hidden" name="lat" value="{{ form.lat or '' }}" id="f-lat">
+      <input type="hidden" name="lng" value="{{ form.lng or '' }}" id="f-lng">
+      <div class="card-head"><div><span class="eyebrow">Шинэ асуудал</span><h1 class="mb-0" style="font-size:1.5rem">📝 Асуудал мэдээлэх</h1></div></div>
+      <div class="card-body form-grid">
+        {% if errors %}<div class="alert alert-error" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
+        {% if duplicates %}
+        <div class="dup-panel" role="alert">
+          <h4>⚠️ Энэ асуудал өмнө нь мэдээлэгдсэн байна.</h4>
+          <p class="small muted mb-0">Шинээр үүсгэхийн оронд одоо байгаа асуудлыг дэмжвэл илүү хурдан шийдэгдэнэ.</p>
+          {% for d in duplicates %}
+          <div class="dup-item"><div class="grow"><b>{{ d.title }}</b><span class="xs muted">📍 {{ d.location_label }} · 👍 {{ d.support_count }} · {{ d.status_info.label }}</span></div>
+            <a class="btn btn-primary btn-sm" href="/issues/{{ d.id }}">👍 Үүнийг дэмжих</a></div>
+          {% endfor %}
+          <button type="button" class="btn btn-light btn-sm mt-2 js-dup-continue">Үгүй, миний асуудал өөр — үргэлжлүүлэх</button>
+        </div>
+        {% endif %}
+
+        <div class="field">
+          <label for="f-title">Гарчиг <span class="req">*</span> <span class="char-count" data-for="f-title">0/150</span></label>
+          <input id="f-title" class="input" name="title" maxlength="150" required value="{{ form.title or '' }}" placeholder="Жишээ: 26-р хорооны замын эвдрэл" autocomplete="off">
+        </div>
+
+        <div class="dup-panel js-dup-panel" hidden aria-live="polite"></div>
+
+        <div class="field">
+          <span class="label">Ангилал <span class="req">*</span></span>
+          <div class="cat-grid" role="radiogroup" aria-label="Ангилал">
+            {% for key, c in CATEGORIES.items() %}
+            <label class="cat-opt"><input type="radio" name="category" value="{{ key }}" {% if form.category == key %}checked{% endif %} required><span><em>{{ c.icon }}</em>{{ c.label }}</span></label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="f-desc">Дэлгэрэнгүй тайлбар <span class="req">*</span> <span class="char-count" data-for="f-desc">0/3000</span></label>
+          <textarea id="f-desc" name="description" maxlength="3000" required placeholder="Асуудал хэзээнээс эхэлсэн, хэнд ямар хүндрэл учруулж байгааг тодорхой бичнэ үү.">{{ form.description or '' }}</textarea>
+        </div>
+
+        {{ m.district_selects(districts, form.district_id, form.khoroo_id) }}
+
+        <div class="field">
+          <label for="f-loc">Байршил (гудамж, байр, тэмдэгт газар)</label>
+          <input id="f-loc" class="input" name="location" maxlength="200" value="{{ form.location or '' }}" placeholder="Жишээ: 26-р хороо, 5-р гудамж, сургуулийн урд">
+          <div class="hint">🗺️ Газрын зураг дээр дарж яг байршлыг тэмдэглэж болно (заавал биш).</div>
+          <div class="picker-map js-picker"><div class="map-fallback small">Газрын зураг ачаалж байна...</div></div>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <span class="label">Яаралтай байдал</span>
+            <div class="seg urgency">
+              {% for key, u in URGENCY.items() %}<label><input type="radio" name="urgency" value="{{ key }}" {% if (form.urgency or 'medium') == key %}checked{% endif %}><span>{{ u.label }}</span></label>{% endfor %}
+            </div>
+          </div>
+          <div class="field">
+            <span class="label">Нөлөөллийн хүрээ</span>
+            <div class="seg">
+              {% for key, s in SCOPES.items() %}<label><input type="radio" name="affected_scope" value="{{ key }}" {% if (form.affected_scope or 'street') == key %}checked{% endif %}><span>{{ s.label }}</span></label>{% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="label">📷 Зураг (өмнөх байдал)</span>
+          <label class="dropzone js-dropzone">
+            <span class="ico">🖼️</span>
+            <b>Зураг сонгох эсвэл энд чирж оруулах</b>
+            <span class="xs">JPG, PNG, WEBP · {{ MAX_UPLOAD_MB }}MB хүртэл</span>
+            <input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif" class="js-image-input" data-max-mb="{{ MAX_UPLOAD_MB }}">
+          </label>
+          <div class="preview js-preview" hidden><img alt="Урьдчилан харах"><button type="button" class="btn btn-light btn-sm js-clear-image">✕ Устгах</button></div>
+        </div>
+
+        <div class="flex between flex-wrap">
+          <span class="small muted">🔒 Таны асуудал нийтэд харагдах бөгөөд утасны дугаар, имэйл харагдахгүй.</span>
+          <button class="btn btn-primary btn-lg" type="submit">🚀 Асуудал илгээх</button>
+        </div>
+      </div>
+    </form>
+
+    <aside class="stack">
+      <div class="card">
+        <div class="card-head"><h3>🏛️ Таны асуудал хэнд очих вэ?</h3></div>
+        <div class="card-body js-mp-preview"><p class="small muted mb-0">Дүүрэг, хороогоо сонгоход хариуцах УИХ-ын гишүүн энд харагдана.</p></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>🔄 Дараа нь юу болох вэ?</h3></div>
+        <div class="card-body">
+          <ul class="activity">
+            <li><span class="ai">🆕</span><div class="ab"><b>Шинэ</b><div class="at">Асуудал нийтлэгдэж, иргэд дэмжинэ</div></div></li>
+            <li><span class="ai">📥</span><div class="ab"><b>Хүлээн авсан</b><div class="at">Тойргийн гишүүн хүлээн авч, танд мэдэгдэнэ</div></div></li>
+            <li><span class="ai">🔍</span><div class="ab"><b>Шалгаж байна</b><div class="at">Газар дээр нь судална</div></div></li>
+            <li><span class="ai">📨</span><div class="ab"><b>Шилжүүлсэн</b><div class="at">Хариуцах байгууллагад албан ёсоор хүргүүлнэ</div></div></li>
+            <li><span class="ai">🛠️</span><div class="ab"><b>Шийдвэрлэж байна</b><div class="at">Ажил гүйцэтгэгдэнэ</div></div></li>
+            <li><span class="ai green">✅</span><div class="ab"><b>Шийдвэрлэсэн</b><div class="at">Өмнө/дараах зургаар нотолж, та баталгаажуулна</div></div></li>
+          </ul>
+        </div>
+      </div>
+      <div class="card card-pad">
+        <h3>💡 Сайн мэдээлэл бичих зөвлөмж</h3>
+        <ul class="small muted" style="padding-left:18px;margin:0">
+          <li>Тодорхой гарчиг: <i>“26-р хорооны замын эвдрэл”</i></li>
+          <li>Хэзээнээс, хэдэн хүнд нөлөөлж байгааг бичих</li>
+          <li>Бодит зураг хавсаргах</li>
+          <li>Ижил асуудал байвал түүнийг дэмжих</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+</div>
+{% endblock %}

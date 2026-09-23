@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Тохиргоо{% endblock %}
+{% block content %}
+<div class="container container-narrow" style="max-width:760px">
+  <div class="admin-head"><div><span class="eyebrow">Платформ</span><h1>⚙️ Тохиргоо</h1></div></div>
+  <form class="card" method="post" action="/admin/settings">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="card-body form-grid">
+      {% if errors %}<div class="alert alert-error"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
+      <div class="field"><label for="s-ann">📢 {{ labels.site_announcement }}</label><input id="s-ann" class="input" name="site_announcement" maxlength="300" value="{{ values.site_announcement }}" placeholder="Жишээ: Энэ сарын 25-нд гишүүдтэй иргэдийн уулзалт болно"><div class="hint">Хоосон бол зарлал харагдахгүй.</div></div>
+      <div class="form-row">
+        <div class="field"><label for="s-hp">⚡ {{ labels.high_priority_threshold }}</label><input id="s-hp" class="input" type="number" min="1" max="100" name="high_priority_threshold" value="{{ values.high_priority_threshold }}"><div class="hint">Гишүүний самбарын “Шуурхай анхаарах” хэсэг ба мэдэгдэлд</div></div>
+        <div class="field"><label for="s-hs">📈 {{ labels.high_support_threshold }}</label><input id="s-hs" class="input" type="number" min="1" name="high_support_threshold" value="{{ values.high_support_threshold }}"></div>
+      </div>
+      <div class="field"><label for="s-dup">🔁 {{ labels.duplicate_threshold }}</label><input id="s-dup" class="input" type="number" step="0.05" min="0.3" max="0.95" name="duplicate_threshold" value="{{ values.duplicate_threshold }}"><div class="hint">Бага утга = илүү олон “төстэй” санал болгоно.</div></div>
+      <label class="checkbox"><input type="checkbox" name="allow_registration" value="1" {% if values.allow_registration == '1' %}checked{% endif %}><span>{{ labels.allow_registration }}</span></label>
+      <label class="checkbox"><input type="checkbox" name="demo_mode" value="1" {% if values.demo_mode == '1' %}checked{% endif %}><span>{{ labels.demo_mode }}</span></label>
+      <div class="alert alert-info small mb-0">🔐 Аюулгүй байдал: нууц үг Argon2id-ээр hash хийгдэнэ · бүх маягт CSRF токентой · зураг {{ MAX_UPLOAD_MB }}MB хүртэл, дахин кодлогдоно · нэвтрэлт, бүртгэл, сэтгэгдэлд хурдны хязгаар үйлчилнэ.</div>
+      <div class="flex" style="justify-content:flex-end"><button class="btn btn-primary">Хадгалах</button></div>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="mn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Иргэний асуудлаас бодит шийдэл хүртэл{% endblock %} · Холбоос</title>
+  <meta name="description" content="Холбоос — иргэд ба УИХ-ын гишүүдийг холбох, асуудлыг ил тод шийдвэрлэх албан ёсны платформ.">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <link rel="icon" href="/static/images/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800&display=swap">
+  <link rel="stylesheet" href="/static/css/style.css?v=7">
+  {% block head %}{% endblock %}
+</head>
+<body class="role-{{ current_user.role if current_user else 'guest' }}" data-auth="{{ '1' if current_user else '0' }}" data-role="{{ current_user.role if current_user else '' }}">
+  {% include "partials/navbar.html" %}
+  {% if announcement %}<div class="announcement">📢 {{ announcement }}</div>{% endif %}
+  <div class="flash-stack" aria-live="polite">
+    {% for cat, msg in flashes %}
+    <div class="flash flash-{{ cat }}" role="status"><span>{% if cat == 'error' %}⚠️{% elif cat == 'info' %}ℹ️{% else %}✅{% endif %}</span><span>{{ msg }}</span><button type="button" aria-label="Хаах" data-dismiss>×</button></div>
+    {% endfor %}
+  </div>
+  <main class="page">
+    {% block content %}{% endblock %}
+  </main>
+  {% include "partials/footer.html" %}
+  <div class="toast-stack" id="toasts" aria-live="polite"></div>
+  <script src="/static/js/app.js?v=4" defer></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

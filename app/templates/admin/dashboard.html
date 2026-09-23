@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m with context %}
+{% block title %}Админ самбар{% endblock %}
+{% block content %}
+<div class="container" style="max-width:1320px">
+  <div class="admin-head">
+    <div><span class="eyebrow">Платформын удирдлага</span><h1>📊 Хяналтын самбар</h1><p class="muted mb-0">Иргэн → гишүүн → байгууллага → шийдэл урсгалын ерөнхий төлөв</p></div>
+    <div class="flex flex-wrap"><a class="btn btn-light" href="/admin/reports">📑 Тайлан</a><a class="btn btn-primary" href="/admin/reports/export.csv">⬇ CSV экспорт</a></div>
+  </div>
+
+  <div class="stat-cards">
+    <a class="stat-card" href="/admin/users" style="color:inherit"><div class="sc-top"><span>Нийт хэрэглэгч</span><span class="sc-ico">👥</span></div><b>{{ stats.users }}</b></a>
+    <a class="stat-card" href="/admin/users?role=citizen" style="color:inherit"><div class="sc-top"><span>Иргэд</span><span class="sc-ico">🙋</span></div><b>{{ stats.citizens }}</b></a>
+    <a class="stat-card" href="/admin/mps" style="color:inherit"><div class="sc-top"><span>УИХ-ын гишүүд</span><span class="sc-ico">🏛️</span></div><b>{{ stats.mps }}</b></a>
+    <a class="stat-card" href="/admin/issues" style="color:inherit"><div class="sc-top"><span>Нийт асуудал</span><span class="sc-ico">📋</span></div><b>{{ stats.total_issues }}</b></a>
+    <a class="stat-card" href="/admin/issues?status=NEW" style="color:inherit"><div class="sc-top"><span>Шинэ</span><span class="sc-ico">🆕</span></div><b>{{ stats.new }}</b></a>
+    <a class="stat-card" href="/admin/issues?status=IN_PROGRESS" style="color:inherit"><div class="sc-top"><span>Явцтай</span><span class="sc-ico">🛠️</span></div><b>{{ stats.active }}</b></a>
+    <a class="stat-card" href="/admin/issues?status=RESOLVED" style="color:inherit"><div class="sc-top"><span>Шийдвэрлэсэн</span><span class="sc-ico">✅</span></div><b>{{ stats.resolved }}</b><span>{{ stats.resolved_pct }}% нь</span></a>
+  </div>
+
+  <div class="grid-2 mb-3" style="grid-template-columns: minmax(0,1.5fr) minmax(0,1fr)">
+    <section class="card chart-card">
+      <div class="card-head"><h3>📈 Долоо хоногийн динамик</h3>
+        <div class="chart-legend"><span><i style="background:{{ SERIES_COLORS.created }}"></i>Мэдээлэгдсэн</span><span><i style="background:{{ SERIES_COLORS.resolved }}"></i>Шийдвэрлэгдсэн</span></div></div>
+      <div class="card-body">
+        <svg viewBox="0 0 {{ weekly.width }} {{ weekly.height }}" role="img" aria-label="Сүүлийн 10 долоо хоногт мэдээлэгдсэн ба шийдвэрлэгдсэн асуудлын тоо">
+          {% for t in weekly.ticks %}
+          <line x1="{{ weekly.left }}" x2="{{ weekly.right }}" y1="{{ t.y }}" y2="{{ t.y }}" stroke="{{ '#cbd5e1' if loop.first else '#eef1f6' }}" stroke-width="1"/>
+          <text x="{{ weekly.left - 8 }}" y="{{ t.y + 4 }}" text-anchor="end" font-size="11" fill="#64748b">{{ t.label }}</text>
+          {% endfor %}
+          {% for g in weekly.groups %}
+          <g class="viz-group" data-tip="{{ g.tip }}">
+            <rect class="viz-hit" x="{{ g.x }}" y="{{ weekly.top }}" width="{{ g.w }}" height="{{ weekly.base_y - weekly.top }}" rx="6" fill="transparent"/>
+            {% for b in g.bars %}{% if b.path %}<path d="{{ b.path }}" fill="{{ b.color }}"/>{% endif %}{% endfor %}
+            <text x="{{ g.cx }}" y="{{ weekly.label_y }}" text-anchor="middle" font-size="11" fill="#64748b">{{ g.label }}</text>
+          </g>
+          {% endfor %}
+        </svg>
+        <details class="mt-1"><summary class="link-btn small">Хүснэгтээр харах</summary>
+          <div class="table-wrap mt-1"><table class="table"><thead><tr><th>Долоо хоног</th><th>Мэдээлэгдсэн</th><th>Шийдвэрлэгдсэн</th></tr></thead>
+          <tbody>{% for g in weekly.groups %}<tr><td>{{ g.label }}</td><td>{{ g.bars[0].value }}</td><td>{{ g.bars[1].value }}</td></tr>{% endfor %}</tbody></table></div>
+        </details>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h3>🔄 Төлөвөөр</h3><span class="xs muted">Нийт {{ stats.total_issues }}</span></div>
+      <div class="card-body">
+        {% set smax = [stats.by_status.values()|max, 1]|max %}
+        {% for s in STATUSES %}{% set v = stats.by_status[s] %}
+        <a class="hbar wide" href="/admin/issues?status={{ s }}" style="color:inherit" data-tip="{{ STATUS_INFO[s].label }}: {{ v }} асуудал">
+          <span class="nowrap">{{ STATUS_INFO[s].icon }} {{ STATUS_INFO[s].short }}</span>
+          <div class="track"><i style="width: {{ (v * 100 / smax)|round|int }}%; background: var(--{{ STATUS_INFO[s].color }})"></i></div><b>{{ v }}</b>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <div class="grid-2 mb-3">
+    <section class="card">
+      <div class="card-head"><h3>🏙️ Дүүргээр</h3><div class="chart-legend"><span><i style="background:{{ SERIES_COLORS.created }}"></i>Нээлттэй</span><span><i style="background:{{ SERIES_COLORS.resolved }}"></i>Шийдвэрлэсэн</span></div></div>
+      <div class="card-body">
+        {% set dmax = [districts|map(attribute='total')|max, 1]|max %}
+        {% for d in districts %}
+        <div class="hbar wide" data-tip="{{ d.name }}: нээлттэй {{ d.total - d.resolved }}, шийдвэрлэсэн {{ d.resolved }} ({{ d.resolved_pct }}%)">
+          <span class="nowrap">{{ d.name }}</span>
+          <div class="track">{% if d.total - d.resolved %}<i class="o" style="width: {{ ((d.total - d.resolved) * 100 / dmax)|round|int }}%"></i>{% endif %}{% if d.resolved %}<i class="r" style="width: {{ (d.resolved * 100 / dmax)|round|int }}%"></i>{% endif %}</div>
+          <b>{{ d.total }}</b>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    <section class="card">
+      <div class="card-head"><h3>🏷️ Ангиллаар</h3></div>
+      <div class="card-body">
+        {% set cmax = [categories|map(attribute='total')|max, 1]|max %}
+        {% for c in categories %}
+        <div class="hbar wide" data-tip="{{ c.label }}: {{ c.total }} асуудал, {{ c.resolved }} шийдвэрлэсэн">
+          <span class="nowrap" title="{{ c.label }}">{{ c.icon }} {{ c.label }}</span>
+          <div class="track"><i class="o" style="width: {{ (c.total * 100 / cmax)|round|int }}%"></i></div><b>{{ c.total }}</b>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <div class="grid-2">
+    <section class="card">
+      <div class="card-head"><h3>🕒 Сүүлийн үйл ажиллагаа</h3><a class="small" href="/admin/issues">Бүх асуудал</a></div>
+      <div class="card-body">
+        <ul class="activity">
+          {% for h in recent %}
+          <li><span class="ai {{ 'green' if h.new_status == 'RESOLVED' else ('gold' if h.new_status != 'NEW' else '') }}">{{ h.new_info.icon }}</span>
+            <div><div class="ab"><b>{{ h.changed_by.full_name if h.changed_by else 'Систем' }}</b> · <a href="/admin/issues/{{ h.issue_id }}">{{ h.issue.title|truncate(48) }}</a></div>
+              <div class="at">{{ h.new_info.label }} · {{ h.created_at|timeago }}</div></div></li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+    <div class="stack">
+      <section class="card">
+        <div class="card-head"><h3>🏛️ Гишүүдийн гүйцэтгэл</h3><a class="small" href="/admin/reports">Дэлгэрэнгүй</a></div>
+        <div class="table-wrap"><table class="table">
+          <thead><tr><th>Гишүүн</th><th>Оноогдсон</th><th>Шийдсэн</th><th>Хүлээн авах</th></tr></thead>
+          <tbody>{% for p in mp_perf %}<tr><td><div class="flex">{{ m.avatar(p.user, 'avatar-xs') }}<b class="small">{{ p.user.full_name }}</b></div></td><td>{{ p.total }}</td><td>{{ p.resolved }}</td><td class="nowrap">{{ p.avg_response }}</td></tr>{% endfor %}</tbody>
+        </table></div>
+      </section>
+      <section class="card">
+        <div class="card-head"><h3>🆕 Шинэ хэрэглэгчид</h3><a class="small" href="/admin/users">Бүгд</a></div>
+        <ol class="rank-list">
+          {% for u in new_users %}<li><a href="/admin/users/{{ u.id }}/edit">{{ m.avatar(u, 'avatar-sm') }}<span><span class="t">{{ u.full_name }}</span><span class="m">{{ u.role_label }} · {{ u.created_at|timeago }}</span></span></a></li>{% endfor %}
+        </ol>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}

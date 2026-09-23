@@ -1,0 +1,7 @@
+{% if pages > 1 %}
+<nav class="pagination" aria-label="Хуудаслалт">
+  {% if page > 1 %}<a class="btn btn-light btn-sm" href="{{ url_with(request, page=page - 1) }}">← Өмнөх</a>{% endif %}
+  <span class="small muted">{{ page }} / {{ pages }}</span>
+  {% if page < pages %}<a class="btn btn-light btn-sm" href="{{ url_with(request, page=page + 1) }}">Дараах →</a>{% endif %}
+</nav>
+{% endif %}

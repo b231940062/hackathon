@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Газрын зураг{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer></script>
+{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="admin-head">
+    <div><span class="eyebrow">Ил тод байдал</span><h1>🗺️ Асуудлын газрын зураг</h1><p class="muted mb-0">Улаанбаатар хотын {{ markers|length }} асуудал дүүрэг, хороогоор</p></div>
+    <div class="flex flex-wrap">
+      <select class="js-map-filter" data-key="status" aria-label="Төлөв">
+        <option value="">Бүх төлөв</option><option value="open">Шийдэгдээгүй</option>
+        {% for s in STATUSES %}<option value="{{ s }}">{{ STATUS_INFO[s].label }}</option>{% endfor %}
+      </select>
+      <select class="js-map-filter" data-key="category" aria-label="Ангилал">
+        <option value="">Бүх ангилал</option>
+        {% for key, c in CATEGORIES.items() %}<option value="{{ key }}">{{ c.icon }} {{ c.label }}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="map-legend">{% for s in STATUSES %}<span><i style="background: var(--{{ STATUS_INFO[s].color }})"></i>{{ STATUS_INFO[s].label }}</span>{% endfor %}</div>
+  <div class="map-layout">
+    <div class="map-box" id="issue-map" data-markers='{{ markers|jsonscript }}'>
+      <div class="map-fallback"><div><div style="font-size:2.5rem">🗺️</div><b>Газрын зураг ачаалж байна...</b><p class="small">Интернэт холболтгүй бол баруун талын дүүргийн жагсаалтыг ашиглана уу.</p></div></div>
+    </div>
+    <aside class="card">
+      <div class="card-head"><h3>🏙️ Дүүргүүд</h3><span class="xs muted">Дарж томруулна</span></div>
+      <div class="card-body district-list">
+        {% for d in districts %}
+        <button type="button" class="district-btn js-district-zoom" data-id="{{ d.id }}" data-lat="{{ d.lat }}" data-lng="{{ d.lng }}">
+          <b>{{ d.name }}</b><span class="small"><b>{{ d.total }}</b> асуудал</span>
+          <span class="xs muted">🆕 {{ d.new }} · 🛠️ {{ d.active }} · ✅ {{ d.resolved }}</span><span class="xs" style="text-align:right;color:var(--green);font-weight:700">{{ d.resolved_pct }}%</span>
+          <div class="progress"><i style="width: {{ d.resolved_pct }}%"></i></div>
+        </button>
+        {% endfor %}
+      </div>
+    </aside>
+  </div>
+</div>
+{% endblock %}

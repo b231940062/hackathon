@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m with context %}
+{% block title %}Асуудлууд{% endblock %}
+{% block content %}
+{% set qs = '&q=' ~ (q|urlencode) ~ '&category=' ~ category ~ '&district=' ~ district ~ '&status=' ~ status %}
+<div class="container feed-layout">
+  <aside class="sidebar sidebar-left">
+    {% if current_user %}
+    <a class="card me-card" href="{{ '/profile' if not current_user.is_mp else '/mp/profile' }}" style="color:inherit">
+      {{ m.avatar(current_user) }}
+      <div class="grow"><b>{{ current_user.full_name }}</b><div class="xs muted">{{ current_user.role_label }}{% if current_user.district %} · {{ current_user.district.name }}{% endif %}</div></div>
+    </a>
+    {% endif %}
+    <nav class="card side-nav" aria-label="Асуудлын шүүлтүүр">
+      <a href="/issues" class="{{ 'active' if tab == 'new' and not category else '' }}">📰 Бүх асуудал <span class="n">{{ stats.total_issues }}</span></a>
+      <a href="/issues?tab=top" class="{{ 'active' if tab == 'top' else '' }}">🔥 Топ асуудлууд</a>
+      <a href="/issues?tab=resolved" class="{{ 'active' if tab == 'resolved' else '' }}">✅ Шийдвэрлэсэн <span class="n">{{ stats.resolved }}</span></a>
+      <a href="/map">🗺️ Газрын зураг</a>
+      {% if current_user and current_user.is_citizen %}<a href="/my-issues">📋 Миний асуудлууд</a>{% endif %}
+      <a href="/mps">🏛️ УИХ-ын гишүүд</a>
+      <div class="label">Ангилал</div>
+      {% for key, c in CATEGORIES.items() %}
+      <a href="/issues?tab={{ tab }}&category={{ key }}" class="{{ 'active' if category == key else '' }}">{{ c.icon }} {{ c.label }} <span class="n">{{ cat_counts.get(key, 0) }}</span></a>
+      {% endfor %}
+    </nav>
+  </aside>
+
+  <section class="feed-list" aria-label="Асуудлын урсгал">
+    {% if not current_user or current_user.is_citizen %}
+    <div class="card composer">
+      <div class="composer-top">
+        {% if current_user %}{{ m.avatar(current_user) }}{% else %}<span class="avatar" style="background:#94a3b8">?</span>{% endif %}
+        <a class="composer-input" href="/issues/new">Ямар асуудал тулгараад байна{% if current_user %}, {{ current_user.full_name.split('.')[-1] }}{% endif %}?</a>
+      </div>
+      <div class="composer-actions">
+        <a href="/issues/new">📷 Зураг</a><a href="/issues/new">📍 Байршил</a><a href="/issues/new">🏷️ Ангилал</a>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <nav class="feed-tabs" aria-label="Эрэмбэ">
+        {% for key, label in tabs %}<a href="/issues?tab={{ key }}{{ qs }}" class="{{ 'active' if tab == key else '' }}">{{ label }}</a>{% endfor %}
+      </nav>
+      <form class="filters" method="get" action="/issues">
+        <input type="hidden" name="tab" value="{{ tab }}">
+        <input class="input" type="search" name="q" value="{{ q }}" placeholder="🔍 Хайх: гарчиг, байршил..." aria-label="Хайх">
+        <select name="district" aria-label="Дүүрэг" onchange="this.form.submit()">
+          <option value="">Бүх дүүрэг</option>
+          {% for d in districts %}<option value="{{ d.id }}" {% if d.id == district %}selected{% endif %}>{{ d.name }}</option>{% endfor %}
+        </select>
+        <select name="status" aria-label="Төлөв" onchange="this.form.submit()">
+          <option value="">Бүх төлөв</option>
+          <option value="open" {% if status == 'open' %}selected{% endif %}>Шийдэгдээгүй</option>
+          {% for s in STATUSES %}<option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ STATUS_INFO[s].label }}</option>{% endfor %}
+        </select>
+        <select name="category" aria-label="Ангилал" onchange="this.form.submit()">
+          <option value="">Бүх ангилал</option>
+          {% for key, c in CATEGORIES.items() %}<option value="{{ key }}" {% if category == key %}selected{% endif %}>{{ c.icon }} {{ c.label }}</option>{% endfor %}
+        </select>
+      </form>
+    </div>
+
+    <div class="feed-list js-feed" data-base="/issues?tab={{ tab }}{{ qs }}">
+      {% if issues %}
+        {% include "issues/_cards.html" %}
+      {% else %}
+        <div class="card">{{ m.empty('🔎', 'Асуудал олдсонгүй', 'Шүүлтүүрээ өөрчилж үзнэ үү.') }}</div>
+      {% endif %}
+    </div>
+  </section>
+
+  <aside class="sidebar sidebar-right">
+    <div class="card side-card">
+      <div class="card-head"><h3>🔥 Топ асуудлууд</h3><a class="small" href="/issues?tab=top">Бүгд</a></div>
+      <ol class="rank-list">
+        {% for i in top5 %}
+        <li><a href="/issues/{{ i.id }}"><span class="rk">{{ loop.index }}</span><span><span class="t">{{ i.title }}</span><span class="m">⚡ {{ i.priority_score }}/100 · 👍 {{ i.support_count }} · {{ i.district.name }}</span></span></a></li>
+        {% endfor %}
+      </ol>
+    </div>
+
+    {% if my_mp %}
+    <div class="card side-card">
+      <div class="card-head"><h3>🏛️ Таны тойргийн гишүүн</h3></div>
+      <div class="card-body">
+        <a class="mp-mini" href="/mps/{{ my_mp.id }}" style="color:inherit">{{ m.avatar(my_mp, 'avatar-lg ring') }}<div><b>{{ my_mp.full_name }}</b><div class="xs muted">{{ my_mp.mp_profile.constituency if my_mp.mp_profile else '' }}</div></div></a>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card side-card">
+      <div class="card-head"><h3>📊 Ил тод байдал</h3></div>
+      <div class="card-body">
+        <div class="stat-mini">
+          <div><b>{{ stats.total_issues }}</b><span>Нийт асуудал</span></div>
+          <div><b>{{ stats.resolved }}</b><span>Шийдвэрлэсэн</span></div>
+          <div><b>{{ stats.active }}</b><span>Явцтай</span></div>
+          <div><b>{{ stats.new }}</b><span>Хүлээгдэж буй</span></div>
+        </div>
+        <div class="flex between small mt-2"><span class="muted">Шийдвэрлэлтийн хувь</span><b>{{ stats.resolved_pct }}%</b></div>
+        <div class="progress mt-1"><i style="width: {{ stats.resolved_pct }}%"></i></div>
+      </div>
+    </div>
+
+    {% if recent_resolved %}
+    <div class="card side-card">
+      <div class="card-head"><h3>✅ Саяхан шийдвэрлэгдсэн</h3></div>
+      <ol class="rank-list">
+        {% for i in recent_resolved %}
+        <li><a href="/issues/{{ i.id }}#resolution"><span class="rk" style="background:var(--green-bg);color:var(--green)">✓</span><span><span class="t">{{ i.title }}</span><span class="m">{{ i.resolved_at|timeago }} · {{ i.district.name }}</span></span></a></li>
+        {% endfor %}
+      </ol>
+    </div>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

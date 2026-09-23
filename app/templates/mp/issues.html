@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m with context %}
+{% block title %}{{ views[view] }}{% endblock %}
+{% block content %}
+<div class="container" style="max-width:1100px">
+  <div class="admin-head">
+    <div><span class="eyebrow">{{ profile.constituency if profile else 'Гишүүний самбар' }}</span><h1>{{ views[view] }}</h1>
+      <p class="muted mb-0">{{ issues|length }} асуудал · {{ sorts[sort] }} эрэмбэлсэн</p></div>
+  </div>
+  <nav class="view-tabs">
+    {% for key, label in views.items() %}<a href="/mp/issues?view={{ key }}&sort={{ sort }}" class="{{ 'active' if view == key else '' }}">{{ label }}</a>{% endfor %}
+  </nav>
+  <form class="card filters mb-2" method="get" action="/mp/issues" style="border-top:0">
+    <input type="hidden" name="view" value="{{ view }}">
+    <input class="input" type="search" name="q" value="{{ q }}" placeholder="🔍 Хайх..." aria-label="Хайх">
+    <select name="category" onchange="this.form.submit()" aria-label="Ангилал"><option value="">Бүх ангилал</option>{% for key, c in CATEGORIES.items() %}<option value="{{ key }}" {% if category == key %}selected{% endif %}>{{ c.icon }} {{ c.label }}</option>{% endfor %}</select>
+    <select name="sort" onchange="this.form.submit()" aria-label="Эрэмбэ">{% for key, label in sorts.items() %}<option value="{{ key }}" {% if sort == key %}selected{% endif %}>↕ {{ label }}</option>{% endfor %}</select>
+  </form>
+  <section class="card">
+    <ul class="row-list">
+      {% for i in issues %}<li>{{ m.row_item(i, tier(i)) }}</li>
+      {% else %}<li>{{ m.empty('📭', 'Асуудал олдсонгүй', 'Энэ ангилалд таны тойргийн асуудал алга байна.') }}</li>{% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m with context %}
+{% block title %}УИХ-ын гишүүд{% endblock %}
+{% block content %}
+<div class="container" style="max-width:1320px">
+  <div class="admin-head">
+    <div><span class="eyebrow">Удирдлага</span><h1>🏛️ УИХ-ын гишүүд</h1><p class="muted mb-0">Гишүүний тойрог, дүүрэг, хороо нь самбарт харагдах асуудлуудыг тодорхойлно.</p></div>
+    <a class="btn btn-primary" href="/admin/mps/new">＋ Гишүүн нэмэх</a>
+  </div>
+  {% if uncovered %}<div class="alert alert-warn">⚠️ Хариуцах гишүүнгүй дүүрэг: <b>{{ uncovered|map(attribute='name')|join(', ') }}</b>. Эдгээр дүүргийн асуудлыг аль ч гишүүн хүлээн авах боломжтой.</div>{% endif %}
+  <div class="card">
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Гишүүн</th><th>Тойрог / Дүүрэг</th><th>Оноогдсон хороод</th><th>Чиглэл</th><th>Асуудал</th><th>Шийдсэн</th><th style="text-align:right">Үйлдэл</th></tr></thead>
+        <tbody>
+          {% for p in profiles %}{% set st = perf.get(p.user_id) %}
+          <tr>
+            <td><div class="flex">{{ m.avatar(p.user) }}<div><b>{{ p.user.full_name }}</b><div class="xs muted">{{ p.user.email }}</div></div></div></td>
+            <td class="small"><b>{{ p.constituency }}</b><div class="muted">{{ p.district.name if p.district else '—' }}</div></td>
+            <td style="max-width:260px"><div class="flex flex-wrap" style="gap:4px">{% for k in p.khoroos %}<span class="chip chip-brand">{{ k.number }}</span>{% else %}<span class="muted small">—</span>{% endfor %}</div></td>
+            <td>{% for c in p.focus_list %}<span title="{{ CATEGORIES[c].label }}">{{ CATEGORIES[c].icon }}</span>{% endfor %}</td>
+            <td><b>{{ st.total if st else 0 }}</b></td>
+            <td><b>{{ st.resolved if st else 0 }}</b></td>
+            <td><div class="actions">
+              <a class="btn btn-light btn-sm" href="/mps/{{ p.user_id }}">👁</a>
+              <a class="btn btn-light btn-sm" href="/admin/mps/{{ p.user_id }}/edit">✏️ Засах</a>
+              <form method="post" action="/admin/users/{{ p.user_id }}/delete" data-confirm="“{{ p.user.full_name }}” гишүүний бүртгэлийг устгах уу? Оноогдсон асуудлууд хариуцагчгүй болно." data-confirm-title="Гишүүн устгах">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="next" value="/admin/mps"><button class="btn btn-danger-soft btn-sm">🗑</button>
+              </form>
+            </div></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7">{{ m.empty('🏛️', 'Гишүүн бүртгэгдээгүй байна') }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

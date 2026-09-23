@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m with context %}
+{% block title %}{{ 'Гишүүн засах' if target else 'Гишүүн нэмэх' }}{% endblock %}
+{% block content %}
+{% if form %}{% set f = form %}
+{% elif target %}{% set f = {'full_name': target.full_name, 'email': target.email, 'phone': target.phone or '', 'constituency': profile.constituency, 'district_id': profile.district_id or '', 'khoroo_ids': profile.khoroo_ids|list, 'position': profile.position, 'bio': profile.bio, 'focus_categories': profile.focus_list} %}
+{% else %}{% set f = {'full_name': '', 'email': '', 'phone': '', 'constituency': '', 'district_id': '', 'khoroo_ids': [], 'position': 'УИХ-ын гишүүн', 'bio': '', 'focus_categories': []} %}{% endif %}
+<div class="container container-narrow">
+  <nav class="breadcrumb"><a href="/admin/mps">УИХ-ын гишүүд</a><span>›</span><span>{{ target.full_name if target else 'Шинэ гишүүн' }}</span></nav>
+  <form class="card" method="post" action="{{ '/admin/mps/' ~ target.id ~ '/edit' if target else '/admin/mps/new' }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="card-head"><h2>{{ '✏️ Гишүүний профайл засах' if target else '＋ Шинэ УИХ-ын гишүүн' }}</h2>{% if target %}{{ m.avatar(target) }}{% endif %}</div>
+    <div class="card-body form-grid">
+      {% if errors %}<div class="alert alert-error"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
+      <div class="form-row">
+        <div class="field"><label for="mp-name">Нэр <span class="req">*</span></label><input id="mp-name" class="input" name="full_name" required maxlength="120" value="{{ f.full_name }}" placeholder="Г.Бат-Эрдэнэ"></div>
+        <div class="field"><label for="mp-email">Имэйл <span class="req">*</span></label><input id="mp-email" class="input" type="email" name="email" required value="{{ f.email }}"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label for="mp-pw">{{ 'Шинэ нууц үг (заавал биш)' if target else 'Анхны нууц үг *' }}</label><input id="mp-pw" class="input" type="password" name="password" minlength="8" autocomplete="new-password" {% if not target %}required{% endif %}></div>
+        <div class="field"><label for="mp-phone">Утас</label><input id="mp-phone" class="input" name="phone" maxlength="20" value="{{ f.phone }}"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label for="mp-pos">Албан тушаал</label><input id="mp-pos" class="input" name="position" maxlength="160" value="{{ f.position }}"></div>
+        <div class="field"><label for="mp-const">Тойрог <span class="req">*</span></label><input id="mp-const" class="input" name="constituency" required maxlength="160" value="{{ f.constituency }}" placeholder="Баянзүрх дүүргийн тойрог"></div>
+      </div>
+      <div class="js-khoroo-picker" data-districts='{{ districts|jsonscript }}' data-selected='{{ f.khoroo_ids|list|jsonscript }}'>
+        <div class="field"><label for="mp-district">Дүүрэг</label>
+          <select id="mp-district" name="district_id" class="js-kp-district"><option value="">— Сонгох —</option>{% for d in districts %}<option value="{{ d.id }}" {% if d.id|string == f.district_id|string %}selected{% endif %}>{{ d.name }}</option>{% endfor %}</select></div>
+        <div class="field mt-2"><div class="flex between"><span class="label">Оноогдсон хороод</span><span class="small"><button type="button" class="link-btn js-kp-all">Бүгдийг</button> · <button type="button" class="link-btn js-kp-none">Цэвэрлэх</button></span></div>
+          <div class="khoroo-grid js-kp-grid"><span class="muted small">Эхлээд дүүрэг сонгоно уу.</span></div>
+          <div class="hint">Эдгээр хорооны асуудал гишүүний самбарт хамгийн түрүүнд харагдана.</div></div>
+      </div>
+      <div class="field"><span class="label">Анхаарах чиглэл</span>
+        <div class="flex flex-wrap" style="gap:6px">{% for key, c in CATEGORIES.items() %}<label class="chip" style="cursor:pointer"><input type="checkbox" name="focus_categories" value="{{ key }}" {% if key in f.focus_categories %}checked{% endif %}> {{ c.icon }} {{ c.label }}</label>{% endfor %}</div></div>
+      <div class="field"><label for="mp-bio">Намтар</label><textarea id="mp-bio" name="bio" maxlength="2000">{{ f.bio }}</textarea></div>
+      <div class="field"><label>Профайл зураг</label><input class="input" type="file" name="profile_image" accept="image/*"></div>
+      <div class="flex between"><a class="btn btn-ghost" href="/admin/mps">← Буцах</a><button class="btn btn-primary btn-lg">Хадгалах</button></div>
+    </div>
+  </form>
+</div>
+{% endblock %}

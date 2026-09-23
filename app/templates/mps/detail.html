@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m with context %}
+{% block title %}{{ mp.full_name }}{% endblock %}
+{% block content %}
+<div class="container">
+  <nav class="breadcrumb"><a href="/">Нүүр</a><span>›</span><a href="/mps">УИХ-ын гишүүд</a><span>›</span><span>{{ mp.full_name }}</span></nav>
+  <section class="dash-head mb-3">
+    {{ m.avatar(mp, 'avatar-xl ring') }}
+    <div>
+      <div class="sub">{{ profile.position }}</div>
+      <h1>{{ mp.full_name }}</h1>
+      <div class="chips">
+        <span class="chip gold">🏛️ {{ profile.constituency }}</span>
+        {% if profile.district %}<span class="chip">📍 {{ profile.district.name }}</span>{% endif %}
+        {% if profile.khoroos %}<span class="chip">Хороод: {{ profile.khoroo_numbers|join(', ') }}</span>{% endif %}
+        {% for c in profile.focus_list %}<span class="chip">{{ CATEGORIES[c].icon }} {{ CATEGORIES[c].label }}</span>{% endfor %}
+      </div>
+    </div>
+  </section>
+  {% if profile.bio %}<div class="card card-pad mb-3"><p class="mb-0">{{ profile.bio }}</p></div>{% endif %}
+  <div class="kpis">
+    <div class="kpi"><b>{{ stats.total }}</b><span>Тойргийн асуудал</span></div>
+    <div class="kpi"><b>{{ stats.active }}</b><span>Явцтай</span></div>
+    <div class="kpi green"><b>{{ stats.resolved }}</b><span>Шийдвэрлэсэн</span></div>
+    <div class="kpi"><b>{{ stats.resolved_pct }}%</b><span>Шийдвэрлэлтийн хувь</span></div>
+    <div class="kpi"><b>{{ stats.avg_response }}</b><span>Хүлээн авах дундаж</span></div>
+    <div class="kpi"><b>{{ stats.satisfaction ~ '%' if stats.satisfaction is not none else '—' }}</b><span>Иргэдийн баталгаажуулалт</span></div>
+  </div>
+  <div class="dash-grid">
+    <section class="card">
+      <div class="card-head"><h2>📍 Тойргийн нээлттэй асуудлууд</h2></div>
+      <ul class="row-list">{% for i in active %}<li>{{ m.row_item(i) }}</li>{% else %}<li>{{ m.empty('🎉', 'Нээлттэй асуудал алга') }}</li>{% endfor %}</ul>
+    </section>
+    <section class="card">
+      <div class="card-head"><h2>✅ Шийдвэрлэсэн</h2></div>
+      <ul class="row-list">{% for i in resolved %}<li>{{ m.row_item(i, show_status=False) }}</li>{% else %}<li>{{ m.empty('⏳', 'Одоогоор алга') }}</li>{% endfor %}</ul>
+    </section>
+  </div>
+</div>
+{% endblock %}

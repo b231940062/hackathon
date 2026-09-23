@@ -1,0 +1,75 @@
+<div class="card mp-panel" id="mp-panel">
+  <div class="card-head"><h3>🏛️ Гишүүний үйлдэл</h3><span class="chip chip-gold">Зөвхөн танд</span></div>
+
+  {% if issue.status == 'NEW' %}
+  <form class="claim-box" method="post" action="/mp/issues/{{ issue.id }}/accept">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <p class="small muted mt-0">{% if can_claim %}Энэ асуудал одоогоор хариуцах гишүүнгүй байна.{% else %}Энэ асуудал таны тойрогт хамаарч байна.{% endif %} Хүлээн авснаар иргэнд мэдэгдэл очиж, төлөв <b>“Хүлээн авсан”</b> болно.</p>
+    <textarea name="message" rows="3" maxlength="2000" placeholder="Иргэнд хүргэх мессеж (заавал биш). Жишээ: Таны асуудлыг хүлээн авлаа..."></textarea>
+    <button class="btn btn-primary btn-lg btn-block mt-2">✅ Асуудлыг хүлээн авах</button>
+  </form>
+  {% endif %}
+
+  {% if can_manage %}
+  <div class="tabs js-tabs" role="tablist">
+    <button type="button" role="tab" data-tab="status" class="active">🔄 Статус</button>
+    <button type="button" role="tab" data-tab="response">🏛️ Албан хариу</button>
+    <button type="button" role="tab" data-tab="forward">📨 Шилжүүлэх</button>
+    <button type="button" role="tab" data-tab="update">🛠️ Явц</button>
+    <button type="button" role="tab" data-tab="resolve">✅ Шийдвэрлэх</button>
+  </div>
+
+  <form class="tab-panel" data-panel="status" method="post" action="/mp/issues/{{ issue.id }}/status">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="field">
+      <label for="mp-status">Шинэ төлөв</label>
+      <select id="mp-status" name="status" required>
+        {% for s in STATUSES[1:5] %}
+        <option value="{{ s }}" {% if s == issue.status %}disabled{% endif %} {% if loop.index0 == [issue.status_index, 3]|min and s != issue.status %}selected{% endif %}>{{ STATUS_INFO[s].icon }} {{ STATUS_INFO[s].label }}{% if s == issue.status %} (одоогийн){% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field"><label for="mp-note">Тайлбар (иргэдэд харагдана)</label><textarea id="mp-note" name="note" rows="2" maxlength="500" placeholder="Жишээ: Газар дээр нь очиж шалгаж байна."></textarea></div>
+    {% if issue.is_resolved %}<p class="xs muted">⚠️ Асуудал шийдвэрлэгдсэн байна. Төлөв өөрчилбөл дахин нээгдэнэ.</p>{% endif %}
+    <button class="btn btn-primary btn-block mt-2">Төлөв шинэчлэх</button>
+  </form>
+
+  <form class="tab-panel" data-panel="response" method="post" action="/mp/issues/{{ issue.id }}/response" hidden>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="kind" value="response">
+    <div class="field"><label for="mp-resp">🏛️ Албан ёсны хариу</label>
+      <textarea id="mp-resp" name="content" rows="4" required minlength="5" maxlength="2000" placeholder="Тус асуудлыг хүлээн авч, холбогдох байгууллагад хүргүүлэн ажиллаж байна."></textarea>
+      <div class="hint">Иргэдийн сэтгэгдлээс тусдаа, албан хариу хэлбэрээр онцгойлон харагдана.</div></div>
+    <button class="btn btn-primary btn-block mt-2">Албан хариу нийтлэх</button>
+  </form>
+
+  <form class="tab-panel" data-panel="forward" method="post" action="/mp/issues/{{ issue.id }}/forward" hidden>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="field"><label for="mp-org">Хариуцах төрийн байгууллага</label>
+      <select id="mp-org" name="organization" class="js-org" required>
+        {% for o in ORGANIZATIONS %}<option value="{{ o }}">{{ o }}</option>{% endfor %}
+        <option value="__other__">Бусад байгууллага...</option>
+      </select></div>
+    <div class="field js-org-other" hidden><label for="mp-org-other">Байгууллагын нэр</label><input id="mp-org-other" class="input" name="organization_other" maxlength="200"></div>
+    <div class="field"><label for="mp-fwd-note">Албан хариу (заавал биш)</label><textarea id="mp-fwd-note" name="note" rows="3" maxlength="2000" placeholder="Хоосон бол: “Тус асуудлыг хүлээн авч, холбогдох байгууллагад хүргүүлэн ажиллаж байна.”"></textarea></div>
+    <button class="btn btn-primary btn-block mt-2">📨 Байгууллагад шилжүүлэх</button>
+  </form>
+
+  <form class="tab-panel" data-panel="update" method="post" action="/mp/issues/{{ issue.id }}/response" hidden>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="kind" value="update">
+    <div class="field"><label for="mp-upd">Явцын мэдээлэл</label>
+      <textarea id="mp-upd" name="content" rows="4" required minlength="5" maxlength="2000" placeholder="Жишээ: Засварын ажил эхэлсэн, 2 долоо хоногт дуусна."></textarea></div>
+    <button class="btn btn-primary btn-block mt-2">Явцын мэдээ нэмэх</button>
+  </form>
+
+  <form class="tab-panel" data-panel="resolve" method="post" action="/mp/issues/{{ issue.id }}/resolve" enctype="multipart/form-data" hidden>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="field"><label for="r-exp">Тайлбар <span class="req">*</span></label><textarea id="r-exp" name="explanation" rows="2" required minlength="10" maxlength="3000" placeholder="Юу шийдэгдсэн тухай товч тайлбар"></textarea></div>
+    <div class="field"><label for="r-act">Хийгдсэн ажил <span class="req">*</span></label><textarea id="r-act" name="action_taken" rows="2" required minlength="5" maxlength="3000" placeholder="Жишээ: 1.2 км замыг шинээр асфальтласан"></textarea></div>
+    <div class="field"><label for="r-date">Шийдвэрлэсэн огноо</label><input id="r-date" class="input" type="date" name="resolved_on" value="{{ today().isoformat() }}" max="{{ today().isoformat() }}"></div>
+    <div class="field"><label>📷 Өмнөх зураг</label><input class="input" type="file" name="before_image" accept="image/*"><div class="hint">Хоосон бол иргэний оруулсан зураг ашиглагдана.</div></div>
+    <div class="field"><label>📷 Дараах зураг <span class="req">*</span></label><input class="input" type="file" name="after_image" accept="image/*" {% if not issue.after_image %}required{% endif %}><div class="hint">JPG/PNG, {{ MAX_UPLOAD_MB }}MB хүртэл.</div></div>
+    <div class="field"><label for="r-resp">Албан хариу</label><textarea id="r-resp" name="official_response" rows="2" maxlength="2000" placeholder="Иргэдэд хандсан албан хариу"></textarea></div>
+    <button class="btn btn-success btn-block btn-lg mt-2">✅ Шийдвэрлэсэн гэж тэмдэглэх</button>
+  </form>
+  {% endif %}
+</div>

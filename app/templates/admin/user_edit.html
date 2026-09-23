@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m with context %}
+{% block title %}Хэрэглэгч засах{% endblock %}
+{% block content %}
+{% set f = form or {'full_name': target.full_name, 'email': target.email, 'role': target.role, 'phone': target.phone or '', 'district_id': target.district_id or '', 'khoroo_id': target.khoroo_id or '', 'is_active': target.is_active} %}
+<div class="container container-narrow" style="max-width:720px">
+  <nav class="breadcrumb"><a href="/admin/users">Хэрэглэгчид</a><span>›</span><span>{{ target.full_name }}</span></nav>
+  <form class="card" method="post" action="/admin/users/{{ target.id }}/edit">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="card-head"><div class="flex">{{ m.avatar(target) }}<div><h2 class="mb-0">{{ target.full_name }}</h2><div class="xs muted">#{{ target.id }} · Бүртгүүлсэн {{ target.created_at|date }}{% if target.last_login_at %} · Сүүлд нэвтэрсэн {{ target.last_login_at|timeago }}{% endif %}</div></div></div></div>
+    <div class="card-body form-grid">
+      {% if errors %}<div class="alert alert-error"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
+      <div class="form-row">
+        <div class="field"><label for="u-name">Нэр</label><input id="u-name" class="input" name="full_name" required maxlength="120" value="{{ f.full_name }}"></div>
+        <div class="field"><label for="u-email">Имэйл</label><input id="u-email" class="input" type="email" name="email" required value="{{ f.email }}"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label for="u-role">Эрх</label><select id="u-role" name="role">{% for k, v in ROLES.items() %}<option value="{{ k }}" {% if f.role == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+        <div class="field"><label for="u-phone">Утас</label><input id="u-phone" class="input" name="phone" maxlength="20" value="{{ f.phone }}"></div>
+      </div>
+      {{ m.district_selects(districts, f.district_id, f.khoroo_id, required=False) }}
+      <label class="checkbox"><input type="checkbox" name="is_active" value="1" {% if f.is_active %}checked{% endif %}><span>Идэвхтэй (сонгоогүй бол нэвтрэх боломжгүй)</span></label>
+      <div class="field"><label for="u-pw">Шинэ нууц үг (заавал биш)</label><input id="u-pw" class="input" type="password" name="new_password" minlength="8" autocomplete="new-password"><div class="hint">Хоосон орхивол нууц үг өөрчлөгдөхгүй. Нууц үг hash хэлбэрээр хадгалагдана.</div></div>
+      {% if target.is_mp %}<div class="alert alert-info">🏛️ Гишүүний тойрог, хороог <a href="/admin/mps/{{ target.id }}/edit">гишүүний профайл</a> хэсгээс засна.</div>{% endif %}
+      <div class="flex between"><a class="btn btn-ghost" href="/admin/users">← Буцах</a><button class="btn btn-primary">Хадгалах</button></div>
+    </div>
+  </form>
+</div>
+{% endblock %}

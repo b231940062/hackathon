@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m with context %}
+{% block title %}Сэтгэгдэл — Модераци{% endblock %}
+{% block content %}
+<div class="container" style="max-width:1200px">
+  <div class="admin-head">
+    <div><span class="eyebrow">Модераци</span><h1>💬 Сэтгэгдлүүд</h1><p class="muted mb-0">{{ total }} сэтгэгдэл · {{ hidden }} нуусан</p></div>
+  </div>
+  <form class="card filters mb-2" method="get" action="/admin/comments" style="border-top:0">
+    <input class="input" type="search" name="q" value="{{ q }}" placeholder="🔍 Сэтгэгдлийн агуулгаар хайх" aria-label="Хайх">
+    <select name="show" onchange="this.form.submit()" aria-label="Шүүлтүүр"><option value="all">Бүгд</option><option value="hidden" {% if show == 'hidden' %}selected{% endif %}>Зөвхөн нуусан</option></select>
+    <button class="btn btn-light">Хайх</button>
+  </form>
+  <div class="card">
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Сэтгэгдэл</th><th>Хэрэглэгч</th><th>Асуудал</th><th>Огноо</th><th style="text-align:right">Үйлдэл</th></tr></thead>
+        <tbody>
+          {% for c in comments %}
+          <tr {% if c.is_hidden %}style="opacity:.65"{% endif %}>
+            <td style="max-width:380px">{% if c.is_hidden %}<span class="chip chip-red">Нуусан</span> {% endif %}{{ c.content }}</td>
+            <td class="small nowrap">{{ c.user.full_name if c.user else '—' }}{% if c.user and not c.user.is_citizen %} <span class="role-badge {{ c.user.role }}">{{ c.user.role_label }}</span>{% endif %}</td>
+            <td class="small"><a href="/admin/issues/{{ c.issue_id }}">{{ c.issue.title|truncate(40) }}</a></td>
+            <td class="small nowrap">{{ c.created_at|timeago }}</td>
+            <td><div class="actions">
+              <form method="post" action="/admin/comments/{{ c.id }}/{{ 'unhide' if c.is_hidden else 'hide' }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="next" value="{{ url_with(request) }}"><button class="btn btn-light btn-sm">{{ '↺ Сэргээх' if c.is_hidden else '🙈 Нуух' }}</button></form>
+              <form method="post" action="/admin/comments/{{ c.id }}/delete" data-confirm="Энэ сэтгэгдлийг бүрмөсөн устгах уу?" data-confirm-title="Сэтгэгдэл устгах"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="next" value="{{ url_with(request) }}"><button class="btn btn-danger-soft btn-sm">🗑 Устгах</button></form>
+            </div></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5">{{ m.empty('💬', 'Сэтгэгдэл олдсонгүй') }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "admin/_pagination.html" %}
+  </div>
+</div>
+{% endblock %}

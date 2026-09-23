@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m with context %}
+{% block title %}Хэрэглэгчид{% endblock %}
+{% block content %}
+<div class="container" style="max-width:1320px">
+  <div class="admin-head">
+    <div><span class="eyebrow">Удирдлага</span><h1>👥 Хэрэглэгчид</h1><p class="muted mb-0">{{ total }} хэрэглэгч олдлоо</p></div>
+    <a class="btn btn-primary" href="/admin/mps/new">＋ УИХ-ын гишүүн нэмэх</a>
+  </div>
+  <form class="card filters mb-2" method="get" action="/admin/users" style="border-top:0">
+    <input class="input" type="search" name="q" value="{{ q }}" placeholder="🔍 Нэр, имэйл, утсаар хайх" aria-label="Хайх">
+    <select name="role" onchange="this.form.submit()" aria-label="Эрх"><option value="">Бүх эрх</option>{% for k, v in ROLES.items() %}<option value="{{ k }}" {% if role == k %}selected{% endif %}>{{ v }} ({{ counts.get(k, 0) }})</option>{% endfor %}</select>
+    <select name="status" onchange="this.form.submit()" aria-label="Төлөв"><option value="">Бүх төлөв</option><option value="active" {% if status == 'active' %}selected{% endif %}>Идэвхтэй</option><option value="blocked" {% if status == 'blocked' %}selected{% endif %}>Хаагдсан</option></select>
+    <button class="btn btn-light">Хайх</button>
+  </form>
+  <div class="card">
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Нэр</th><th>Имэйл</th><th>Эрх</th><th>Дүүрэг</th><th>Төлөв</th><th>Бүртгүүлсэн</th><th style="text-align:right">Үйлдэл</th></tr></thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td><div class="flex">{{ m.avatar(u, 'avatar-sm') }}<div><b>{{ u.full_name }}</b>{% if u.phone %}<div class="xs muted">{{ u.phone }}</div>{% endif %}</div></div></td>
+            <td class="small">{{ u.email }}</td>
+            <td>
+              <form class="inline-form" method="post" action="/admin/users/{{ u.id }}/role">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <select name="role" aria-label="Эрх өөрчлөх" {% if u.id == current_user.id %}disabled{% endif %}>{% for k, v in ROLES.items() %}<option value="{{ k }}" {% if u.role == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>
+                {% if u.id != current_user.id %}<button class="btn btn-light btn-sm" title="Эрх солих">↻</button>{% endif %}
+              </form>
+            </td>
+            <td class="small">{{ u.district.name if u.district else '—' }}</td>
+            <td>{% if u.is_active %}<span class="chip chip-green">● Идэвхтэй</span>{% else %}<span class="chip chip-red">● Хаагдсан</span>{% endif %}</td>
+            <td class="small nowrap">{{ u.created_at|date }}</td>
+            <td><div class="actions">
+              <a class="btn btn-light btn-sm" href="/admin/users/{{ u.id }}/edit">✏️ Засах</a>
+              {% if u.id != current_user.id %}
+              <form method="post" action="/admin/users/{{ u.id }}/delete" data-confirm="“{{ u.full_name }}” хэрэглэгчийг устгах уу? Түүний дэмжлэг, сэтгэгдэл хамт устана. Мэдээлсэн асуудлууд нь хадгалагдана." data-confirm-title="Хэрэглэгч устгах">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn btn-danger-soft btn-sm">🗑 Устгах</button>
+              </form>
+              {% endif %}
+            </div></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7">{{ m.empty('🔎', 'Хэрэглэгч олдсонгүй') }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "admin/_pagination.html" %}
+  </div>
+</div>
+{% endblock %}

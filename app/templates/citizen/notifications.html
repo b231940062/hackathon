@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m with context %}
+{% block title %}Мэдэгдэл{% endblock %}
+{% block content %}
+<div class="container container-narrow">
+  <div class="admin-head">
+    <div><span class="eyebrow">{{ current_user.role_label }}</span><h1>🔔 Мэдэгдэл</h1></div>
+    {% if unread_count %}
+    <form method="post" action="/notifications/read-all"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn btn-light">✓ Бүгдийг уншсан болгох ({{ unread_count }})</button></form>
+    {% endif %}
+  </div>
+  <div class="card">
+    {% if items %}
+    <ul class="notif-list">
+      {% for n in items %}
+      <li class="{{ 'unread' if not n.is_read else '' }}">
+        <a href="/notifications/{{ n.id }}/open">
+          <span class="n-ico">{{ n.icon }}</span>
+          <div class="grow"><div>{{ n.message }}</div><div class="n-time">{{ n.created_at|timeago }}</div></div>
+          {% if not n.is_read %}<span class="unread-dot" aria-label="Уншаагүй"></span>{% endif %}
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    {{ m.empty('🔕', 'Мэдэгдэл алга', 'Таны асуудлын явц, дэмжлэг, албан хариуны талаарх мэдэгдлүүд энд харагдана.') }}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Нэвтрэх{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-side">
+    <span class="eyebrow" style="color:var(--gold)">ХОЛБООС</span>
+    <h2>Иргэний асуудлаас бодит шийдэл хүртэл.</h2>
+    <p>Иргэн, УИХ-ын гишүүн, төрийн байгууллагыг нэг ил тод урсгалд холбоно.</p>
+    <ul>
+      <li><span>📝</span>Асуудлаа мэдээлж, хаана хүрснийг хянах</li>
+      <li><span>🏛️</span>Тойргийн гишүүнээс албан ёсны хариу авах</li>
+      <li><span>✅</span>Шийдвэрлэлтийг өмнө/дараах зургаар баталгаажуулах</li>
+    </ul>
+  </div>
+  <div class="auth-main">
+    <div class="auth-card">
+      <h1>Нэвтрэх</h1>
+      <p class="muted">Бүртгэлгүй юу? <a href="/register">Бүртгүүлэх</a></p>
+      {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
+      <form class="form-grid" method="post" action="/login">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="next" value="{{ next or '' }}">
+        <div class="field"><label for="email">Имэйл</label><input id="email" class="input" type="email" name="email" value="{{ email or '' }}" required autocomplete="username" autofocus></div>
+        <div class="field"><label for="password">Нууц үг</label><input id="password" class="input" type="password" name="password" required autocomplete="current-password"></div>
+        <button class="btn btn-primary btn-lg btn-block">Нэвтрэх</button>
+      </form>
+      {% if demo_accounts %}
+      <div class="divider">ДЕМО БҮРТГЭЛҮҮД · нэг товшилтоор нэвтрэх</div>
+      <div class="demo-accounts">
+        {% for a in demo_accounts %}
+        <button type="button" class="demo-acc js-demo-login" data-email="{{ a.email }}" data-password="{{ demo_password }}">
+          <span class="e">{{ a.icon }}</span><span class="grow"><b>{{ a.role }}</b><small>{{ a.email }} · {{ a.name }}</small></span><span>→</span>
+        </button>
+        {% endfor %}
+      </div>
+      <p class="xs muted mt-2">Демо нууц үг: <code>{{ demo_password }}</code> (өгөгдлийн санд Argon2 hash хэлбэрээр хадгалагдсан)</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

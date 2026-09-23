@@ -1,0 +1,11 @@
+fastapi>=0.115
+uvicorn>=0.30
+SQLAlchemy>=2.0.30
+Jinja2>=3.1
+python-multipart>=0.0.9
+itsdangerous>=2.1
+argon2-cffi>=23.1
+Pillow>=10.0
+python-dotenv>=1.0
+psycopg[binary]>=3.1   # зөвхөн PostgreSQL ашиглах үед хэрэгтэй (DATABASE_URL=postgres://...)
+# Туршилтад (optional): httpx

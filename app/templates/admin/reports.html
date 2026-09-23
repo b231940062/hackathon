@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m with context %}
+{% block title %}Тайлан{% endblock %}
+{% block content %}
+<div class="container" style="max-width:1320px">
+  <div class="admin-head">
+    <div><span class="eyebrow">Ил тод байдлын тайлан</span><h1>📑 Тайлан</h1><p class="muted mb-0">Дүүрэг, ангилал, гишүүдийн гүйцэтгэлийн харьцуулалт</p></div>
+    <a class="btn btn-primary" href="/admin/reports/export.csv">⬇ Бүх асуудлыг CSV-ээр татах</a>
+  </div>
+  <div class="grid-4 mb-3">
+    <div class="kpi"><b>{{ stats.total_issues }}</b><span>Нийт асуудал</span></div>
+    <div class="kpi green"><b>{{ stats.resolved_pct }}%</b><span>Шийдвэрлэлтийн хувь</span></div>
+    <div class="kpi"><b>{{ stats.supports }}</b><span>Иргэдийн дэмжлэг</span></div>
+    <div class="kpi"><b>{{ stats.citizens }}</b><span>Идэвхтэй иргэд</span></div>
+  </div>
+
+  <section class="card mb-3">
+    <div class="card-head"><h2>🏛️ УИХ-ын гишүүдийн гүйцэтгэл</h2></div>
+    <div class="table-wrap"><table class="table">
+      <thead><tr><th>Гишүүн</th><th>Тойрог</th><th>Оноогдсон</th><th>Шинэ</th><th>Явцтай</th><th>Шийдсэн</th><th>Шийдвэрлэлт</th><th>Хүлээн авах дундаж</th><th>Шийдвэрлэх дундаж</th><th>Иргэдийн баталгаа</th></tr></thead>
+      <tbody>{% for p in mp_perf %}<tr>
+        <td><div class="flex">{{ m.avatar(p.user, 'avatar-sm') }}<b>{{ p.user.full_name }}</b></div></td>
+        <td class="small">{{ p.profile.constituency }}</td><td>{{ p.total }}</td><td>{{ p.new }}</td><td>{{ p.active }}</td><td><b>{{ p.resolved }}</b></td>
+        <td style="min-width:120px"><div class="flex small"><div class="progress grow"><i style="width: {{ p.resolved_pct }}%"></i></div>{{ p.resolved_pct }}%</div></td>
+        <td class="nowrap">{{ p.avg_response }}</td><td class="nowrap">{{ p.avg_resolution }}</td>
+        <td>{{ (p.satisfaction ~ '%') if p.satisfaction is not none else '—' }} <span class="xs muted">({{ p.confirmations }})</span></td>
+      </tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+
+  <div class="grid-2">
+    <section class="card">
+      <div class="card-head"><h2>🏙️ Дүүргээр</h2></div>
+      <div class="table-wrap"><table class="table">
+        <thead><tr><th>Дүүрэг</th><th>Нийт</th><th>Шинэ</th><th>Явцтай</th><th>Шийдсэн</th><th>%</th></tr></thead>
+        <tbody>{% for d in districts %}<tr><td><b>{{ d.name }}</b></td><td>{{ d.total }}</td><td>{{ d.new }}</td><td>{{ d.active }}</td><td>{{ d.resolved }}</td><td>{{ d.resolved_pct }}%</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </section>
+    <section class="card">
+      <div class="card-head"><h2>🏷️ Ангиллаар</h2></div>
+      <div class="table-wrap"><table class="table">
+        <thead><tr><th>Ангилал</th><th>Нийт</th><th>Шийдсэн</th><th>%</th></tr></thead>
+        <tbody>{% for c in categories %}<tr><td>{{ c.icon }} {{ c.label }}</td><td>{{ c.total }}</td><td>{{ c.resolved }}</td><td>{{ c.resolved_pct }}%</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </section>
+  </div>
+</div>
+{% endblock %}

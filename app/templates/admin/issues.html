@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m with context %}
+{% block title %}Асуудлууд — Админ{% endblock %}
+{% block content %}
+<div class="container" style="max-width:1320px">
+  <div class="admin-head">
+    <div><span class="eyebrow">Модераци</span><h1>📋 Бүх асуудал</h1><p class="muted mb-0">{{ total }} асуудал · Аудит хэсгээс бүх үйл явцыг харна</p></div>
+    <a class="btn btn-light" href="/admin/reports/export.csv">⬇ CSV экспорт</a>
+  </div>
+  <form class="card filters mb-2" method="get" action="/admin/issues" style="border-top:0">
+    <input class="input" type="search" name="q" value="{{ q }}" placeholder="🔍 Гарчиг, тайлбараар хайх" aria-label="Хайх">
+    <select name="status" onchange="this.form.submit()" aria-label="Төлөв"><option value="">Бүх төлөв</option>{% for s in STATUSES %}<option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ STATUS_INFO[s].label }}</option>{% endfor %}</select>
+    <select name="district" onchange="this.form.submit()" aria-label="Дүүрэг"><option value="">Бүх дүүрэг</option>{% for d in districts %}<option value="{{ d.id }}" {% if d.id == district %}selected{% endif %}>{{ d.name }}</option>{% endfor %}</select>
+    <button class="btn btn-light">Хайх</button>
+  </form>
+  <div class="card">
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>#</th><th>Асуудал</th><th>Байршил</th><th>Төлөв</th><th>👍</th><th>Оноо</th><th>Хариуцах гишүүн</th><th>Огноо</th><th style="text-align:right">Үйлдэл</th></tr></thead>
+        <tbody>
+          {% for i in issues %}
+          <tr>
+            <td class="muted small">{{ i.id }}</td>
+            <td class="title-cell"><a href="/admin/issues/{{ i.id }}" style="color:inherit">{{ i.title }}</a><div class="xs muted">{{ i.category_info.icon }} {{ i.category_info.label }} · {{ i.author.full_name if i.author else 'Устгагдсан' }}</div></td>
+            <td class="small nowrap">{{ i.location_label }}</td>
+            <td>{{ m.status_short(i.status) }}</td>
+            <td><b>{{ i.support_count }}</b></td>
+            <td>{{ m.prio_pill(i.priority_score, label=False) }}</td>
+            <td class="small">{{ i.mp.full_name if i.mp else '—' }}</td>
+            <td class="small nowrap">{{ i.created_at|date }}</td>
+            <td><div class="actions">
+              <a class="btn btn-light btn-sm" href="/admin/issues/{{ i.id }}">🔎 Аудит</a>
+              <a class="btn btn-light btn-sm" href="/issues/{{ i.id }}" title="Нийтийн хуудас">👁</a>
+              <form method="post" action="/admin/issues/{{ i.id }}/delete" data-confirm="“{{ i.title }}” асуудлыг бүх сэтгэгдэл, дэмжлэг, түүхийн хамт бүрмөсөн устгах уу?" data-confirm-title="Зохисгүй асуудал устгах">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn btn-danger-soft btn-sm">🗑</button></form>
+            </div></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="9">{{ m.empty('🔎', 'Асуудал олдсонгүй') }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "admin/_pagination.html" %}
+  </div>
+</div>
+{% endblock %}

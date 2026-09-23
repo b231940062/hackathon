@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m with context %}
+{% block title %}Миний асуудлууд{% endblock %}
+{% block content %}
+<div class="container container-narrow" style="max-width:960px">
+  <div class="admin-head">
+    <div><span class="eyebrow">Хувийн самбар</span><h1>📋 Миний асуудлууд</h1></div>
+    <a class="btn btn-primary" href="/issues/new">＋ Асуудал мэдээлэх</a>
+  </div>
+  <div class="grid-4 mb-3">
+    <div class="kpi"><span class="k-ico">📝</span><b>{{ stats.reported }}</b><span>Мэдээлсэн</span></div>
+    <div class="kpi"><span class="k-ico">🛠️</span><b>{{ stats.active }}</b><span>Явцтай</span></div>
+    <div class="kpi green"><span class="k-ico">✅</span><b>{{ stats.resolved }}</b><span>Шийдвэрлэсэн</span></div>
+    <div class="kpi"><span class="k-ico">👍</span><b>{{ stats.supports }}</b><span>Дэмжсэн асуудал</span></div>
+  </div>
+  {% if to_confirm_count %}
+  <div class="alert alert-warn flex between flex-wrap"><span>🔔 <b>{{ to_confirm_count }}</b> шийдвэрлэгдсэн асуудлыг та баталгаажуулаагүй байна.</span><a class="btn btn-gold btn-sm" href="/my-issues?tab=confirm">Баталгаажуулах →</a></div>
+  {% endif %}
+  <nav class="view-tabs">
+    <a href="/my-issues?tab=reported" class="{{ 'active' if tab == 'reported' else '' }}">📝 Миний мэдээлсэн <span class="n">{{ stats.reported }}</span></a>
+    <a href="/my-issues?tab=supported" class="{{ 'active' if tab == 'supported' else '' }}">👍 Миний дэмжсэн <span class="n">{{ stats.supports }}</span></a>
+    <a href="/my-issues?tab=confirm" class="{{ 'active' if tab == 'confirm' else '' }}">✅ Баталгаажуулах <span class="n">{{ to_confirm_count }}</span></a>
+  </nav>
+  <div class="feed-list">
+    {% for issue in issues %}
+      {{ m.issue_card(issue, supported) }}
+    {% else %}
+      <div class="card">
+        {% if tab == 'reported' %}{{ m.empty('📝', 'Та одоогоор асуудал мэдээлээгүй байна', 'Орчиндоо тулгарч буй асуудлыг мэдээлж, шийдэлд хүргээрэй.') }}
+        {% elif tab == 'supported' %}{{ m.empty('👍', 'Дэмжсэн асуудал алга', 'Бусад иргэдийн асуудлыг дэмжиж ач холбогдлыг нь өсгөөрэй.') }}
+        {% else %}{{ m.empty('🎉', 'Баталгаажуулах асуудал алга', 'Бүх шийдвэрлэлтийг та баталгаажуулсан байна.') }}{% endif %}
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
